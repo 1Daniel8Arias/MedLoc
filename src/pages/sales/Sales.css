@@ -1,0 +1,29 @@
+.sales {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f1f5f9;
+}
+
+.sales__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.sales__content {
+    display: flex;
+    padding: 32px;
+    gap: 20px;
+    width: 100%;
+}
+
+.seller {
+    flex: 1;
+    background: #ffffff;
+    border-radius: 20px;
+}
+
+.ticket {
+    flex: 1;
+    background: #ffffff;
+    border-radius: 20px;
+}

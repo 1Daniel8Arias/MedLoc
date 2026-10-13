@@ -1,0 +1,57 @@
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 32px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header__title h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.header__title p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  font-weight: bold;
+}
+
+.header__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header__user-name {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header__user-role {
+  color: #64748b;
+  font-size: 12px;
+}

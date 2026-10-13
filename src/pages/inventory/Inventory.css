@@ -1,0 +1,136 @@
+.inventory{
+display: flex;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+}
+
+.inventory__main{
+    flex: 1;
+  min-width: 0;
+}
+
+.inventory__content {
+  padding: 32px;
+}
+
+
+.inventory {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+}
+
+.inventory__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.inventory__content {
+  padding: 32px;
+}
+
+.inventory__content h2 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 28px;
+}
+
+.inventory__content p {
+  margin: 0 0 24px;
+  color: #64748b;
+}
+
+.inventory__table-container {
+  width: 100%;
+  overflow-x: auto;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12PX;
+}
+
+.inventory__table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.inventory__table-container th,
+.inventory__table-container td {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.inventory__table-container th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-size: 14px;
+}
+
+.inventory__table-container td {
+  color: #334155;
+}
+
+.inventory__table-container tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.inventory__table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.inventory__table-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.inventory__add-button {
+  padding: 10px 18px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.inventory__add-button:hover {
+  background-color: #1d4ed8;
+}
+
+
+.inventory__delete-button,
+.inventory__edit-button {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  margin-right: 8px;
+}
+
+.inventory__delete-button {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.inventory__edit-button {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.inventory__delete-button:hover {
+  background-color: #fecaca;
+}
+
+.inventory__edit-button:hover {
+  background-color: #bfdbfe;
+}
