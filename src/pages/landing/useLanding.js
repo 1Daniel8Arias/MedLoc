@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import useHashRoute from "../../hooks/useHashRoute";
 import { DEFAULT_LOCATION, distanceKm } from "../../services/geo";
+import { getUser, setUser, clearUser } from "../../services/session";
+import { registeredUsers, ROLES } from "../../services/users";
 
 const features = [
   { id: 1, title: "Búsqueda por cercanía", description: "Encuentra tu medicamento por nombre comercial o principio activo y mira primero las droguerías más cercanas." },
@@ -15,7 +17,7 @@ const steps = [
   { id: 4, title: "Recoge", description: "Presenta el código en la droguería y listo." },
 ];
 
-const roles = ["Paciente / Cliente", "Administrador de farmacia"];
+const roles = Object.values(ROLES);
 export const radiusOptions = [2, 5, 10];
 export const suggestions = ["Acetaminofén", "Ibuprofeno", "Losartán", "Omeprazol"];
 
@@ -39,6 +41,9 @@ const normalize = (text) =>
 function useLanding() {
   const { navigate } = useHashRoute();
   const [mode, setMode] = useState("login"); // "login" | "register"
+  const [user, setUserState] = useState(getUser);
+  const [authError, setAuthError] = useState("");
+  const [reservedIds, setReservedIds] = useState([]);
 
   const [query, setQuery] = useState("");
   const [radius, setRadius] = useState(5);
@@ -90,13 +95,65 @@ function useLanding() {
     document.getElementById("acceso")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const enter = (account) => {
+    setUser(account);
+    setUserState(account);
+    setAuthError("");
+    if (account.rol === "ADMIN_FARMACIA") navigate("/dashboard");
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
-    navigate("/dashboard"); // sin lógica de negocio todavía
+    const form = new FormData(event.target);
+    const email = form.get("email").trim().toLowerCase();
+    const password = form.get("password");
+
+    if (mode === "login") {
+      const found = registeredUsers.find((u) => u.email === email && u.password === password);
+      if (!found) {
+        setAuthError("Correo o contraseña incorrectos. Revisa los datos e inténtalo de nuevo.");
+        return;
+      }
+      enter(found);
+      return;
+    }
+
+    if (password !== form.get("password2")) {
+      setAuthError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (registeredUsers.some((u) => u.email === email)) {
+      setAuthError("Ya existe una cuenta con ese correo. Ingresa con ella.");
+      return;
+    }
+    const rol = Object.keys(ROLES).find((key) => ROLES[key] === form.get("rol"));
+    const account = { id: Date.now(), nombre: form.get("nombre"), email, password, rol };
+    registeredUsers.push(account);
+    enter(account);
+  };
+
+  const logout = () => {
+    clearUser();
+    setUserState(null);
+    setReservedIds([]);
+  };
+
+  const reserve = (offerId) => {
+    if (!user) {
+      goToAccess("register");
+      return;
+    }
+    setReservedIds((current) => (current.includes(offerId) ? current : [...current, offerId]));
+  };
+
+  const changeMode = (next) => {
+    setMode(next);
+    setAuthError("");
   };
 
   return {
-    mode, setMode, handleSubmit, goToAccess,
+    mode, setMode: changeMode, handleSubmit, goToAccess,
+    user, authError, logout, reserve, reservedIds, goToPanel: () => navigate("/dashboard"),
     features, steps, roles,
     query, setQuery, radius, setRadius,
     view, setView,

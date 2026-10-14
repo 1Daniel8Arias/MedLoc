@@ -1,5 +1,6 @@
 import "./Sidebar.css";
 import useHashRoute from "../../hooks/useHashRoute";
+import { clearUser } from "../../services/session";
 
 const links = [
     { path: "/dashboard", icon: "▦", label: "Dashboard" },
@@ -34,7 +35,7 @@ function Sidebar() {
             </nav>
 
             <div className="sidebar__footer">
-                <a href="#/" className="sidebar__link">
+                <a href="#/" className="sidebar__link" onClick={clearUser}>
                     <span>⎋</span>
                     Cerrar sesión
                 </a>
