@@ -1,0 +1,22 @@
+services:
+  # Modo desarrollo: docker compose up --build
+  medloc-dev:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules   # usa los node_modules del contenedor, no los del PC
+    environment:
+      - CHOKIDAR_USEPOLLING=true   # necesario para la recarga en Windows
+
+  # Modo producción: docker compose --profile prod up --build medloc-prod
+  medloc-prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8080:80"
