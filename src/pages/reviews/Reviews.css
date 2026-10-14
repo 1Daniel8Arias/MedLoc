@@ -1,0 +1,34 @@
+.reviews { display: flex; min-height: 100vh; background-color: #f1f5f9; }
+.reviews__main { flex: 1; min-width: 0; }
+.reviews__content { padding: 32px; max-width: 980px; }
+.reviews__intro { margin: 0 0 24px; color: #64748b; }
+
+.reviews__summary {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: center;
+  padding: 24px; margin-bottom: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+}
+.reviews__score { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.reviews__score strong { font-size: 52px; line-height: 1; color: #0f172a; }
+.reviews__score span { color: #64748b; font-size: 13px; }
+.reviews__bars { display: flex; flex-direction: column; gap: 8px; }
+.reviews__bar-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 36px; align-items: center; gap: 10px; font-size: 13px; color: #475569; }
+.reviews__bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.reviews__bar div { height: 100%; background: #f59e0b; }
+
+.reviews__list { padding: 8px 24px 24px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
+.review { padding: 20px 0; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.review:last-of-type { border-bottom: none; }
+.review__top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.review__top div { display: flex; flex-direction: column; gap: 2px; }
+.review__top span { color: #94a3b8; font-size: 12px; }
+.review p { margin: 0; color: #334155; line-height: 1.5; }
+.review__reply { width: 100%; padding: 12px 14px; border-left: 3px solid #2563eb; background: #eff6ff; border-radius: 0 8px 8px 0; font-size: 14px; }
+.review__reply strong { color: #1d4ed8; font-size: 13px; }
+.review__form { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.review__form-actions { display: flex; gap: 8px; }
+.reviews__empty { padding: 28px 0 8px; text-align: center; color: #64748b; }
+
+@media (max-width: 800px) {
+  .reviews__summary { grid-template-columns: 1fr; }
+  .reviews__content { padding: 20px; }
+}

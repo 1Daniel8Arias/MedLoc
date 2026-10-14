@@ -1,0 +1,7 @@
+.stars { position: relative; display: inline-block; line-height: 1; letter-spacing: 2px; white-space: nowrap; }
+.stars__base { color: #cbd5e1; }
+.stars__fill { position: absolute; top: 0; left: 0; overflow: hidden; color: #f59e0b; }
+.stars--input { display: inline-flex; gap: 4px; letter-spacing: 0; }
+.stars__btn { padding: 0; border: none; background: none; color: #cbd5e1; font: inherit; cursor: pointer; }
+.stars__btn--on, .stars__btn:hover { color: #f59e0b; }
+.stars__btn:focus-visible { outline: 2px solid #2563eb; border-radius: 4px; }

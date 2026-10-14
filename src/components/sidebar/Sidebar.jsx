@@ -1,16 +1,27 @@
 import "./Sidebar.css";
 import useHashRoute from "../../hooks/useHashRoute";
-import { clearUser } from "../../services/session";
+import { clearUser, getUser } from "../../services/session";
 
-const links = [
+const adminLinks = [
     { path: "/dashboard", icon: "▦", label: "Dashboard" },
     { path: "/inventario", icon: "♙", label: "Inventario" },
     { path: "/ventas", icon: "▣", label: "Punto de venta" },
     { path: "/reservas", icon: "▤", label: "Reservas" },
+    { path: "/calificaciones", icon: "★", label: "Calificaciones" },
+    { path: "/perfil", icon: "☺", label: "Mi perfil" },
+];
+
+const patientLinks = [
+    { path: "/", icon: "⌕", label: "Buscar medicamentos" },
+    { path: "/mis-reservas", icon: "▤", label: "Mis reservas" },
+    { path: "/favoritos", icon: "♡", label: "Favoritos y alertas" },
+    { path: "/perfil", icon: "☺", label: "Mi perfil" },
 ];
 
 function Sidebar() {
     const { route } = useHashRoute();
+    const user = getUser();
+    const links = user?.rol === "PACIENTE" ? patientLinks : adminLinks;
 
     return (
         <aside className="sidebar">
@@ -39,7 +50,7 @@ function Sidebar() {
                     <span>⎋</span>
                     Cerrar sesión
                 </a>
-                <p>Sistema de administración</p>
+                <p>{user?.rol === "PACIENTE" ? "Cuenta de paciente" : "Sistema de administración"}</p>
             </div>
         </aside>
     );
