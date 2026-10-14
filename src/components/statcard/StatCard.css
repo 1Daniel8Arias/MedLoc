@@ -1,0 +1,13 @@
+.statcard {
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  border-radius: 12px;
+}
+.statcard--warning { border-left-color: #f59e0b; }
+.statcard--danger { border-left-color: #dc2626; }
+.statcard--success { border-left-color: #16a34a; }
+.statcard h3 { margin: 0; color: #64748b; font-size: 14px; font-weight: 500; }
+.statcard__value { margin: 10px 0 4px; color: #0f172a; font-size: 28px; font-weight: bold; }
+.statcard__description { margin: 0; color: #94a3b8; font-size: 13px; }

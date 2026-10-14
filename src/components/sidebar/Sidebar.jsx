@@ -1,6 +1,16 @@
 import "./Sidebar.css";
+import useHashRoute from "../../hooks/useHashRoute";
+
+const links = [
+    { path: "/dashboard", icon: "▦", label: "Dashboard" },
+    { path: "/inventario", icon: "♙", label: "Inventario" },
+    { path: "/ventas", icon: "▣", label: "Punto de venta" },
+    { path: "/reservas", icon: "▤", label: "Reservas" },
+];
 
 function Sidebar() {
+    const { route } = useHashRoute();
+
     return (
         <aside className="sidebar">
             <div className="sidebar__brand">
@@ -11,31 +21,24 @@ function Sidebar() {
             <p className="sidebar__label">MENÚ PRINCIPAL</p>
 
             <nav className="sidebar__nav">
-                <a href="#" className="sidebar__link sidebar__link--active">
-                    <span>▦</span>
-                    Dashboard
-                </a>
-
-                <a href="#" className="sidebar__link">
-                    <span>♙</span>
-                    Inventario
-                </a>
-
-                <a href="#" className="sidebar__link">
-                    <span>▤</span>
-                    Reservas
-                </a>
-
-                <p className="sidebar__label">GESTIÓN</p>
-
-                <a href="#" className="sidebar__link">
-                    <span>⚙</span>
-                    Configuración
-                </a>
+                {links.map((link) => (
+                    <a
+                        key={link.path}
+                        href={`#${link.path}`}
+                        className={`sidebar__link ${route === link.path ? "sidebar__link--active" : ""}`}
+                    >
+                        <span>{link.icon}</span>
+                        {link.label}
+                    </a>
+                ))}
             </nav>
 
             <div className="sidebar__footer">
-                Sistema de administración
+                <a href="#/" className="sidebar__link">
+                    <span>⎋</span>
+                    Cerrar sesión
+                </a>
+                <p>Sistema de administración</p>
             </div>
         </aside>
     );

@@ -1,0 +1,12 @@
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field__label { color: #334155; font-size: 13px; font-weight: 600; }
+.field__control {
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: #0f172a;
+}
+.field__control:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 15%); }

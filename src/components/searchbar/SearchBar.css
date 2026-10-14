@@ -1,0 +1,22 @@
+.searchbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+}
+.searchbar:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 15%); }
+.searchbar__icon { color: #64748b; font-size: 18px; }
+.searchbar__input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: #0f172a;
+}
