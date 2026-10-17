@@ -7,6 +7,15 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-
   ],
+  server: {
+    proxy: {
+      // Redirige /api/* → http://localhost:5000/api/*  (backend Flask)
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
+  },
 })
+

@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { getUser } from "../../services/session";
+import { useEffect, useState } from "react";
+import { getUser, setUser } from "../../services/session";
 import { ROLES } from "../../services/users";
+import { usuariosApi, farmaciasApi } from "../../services/api";
 
 export const cities = ["Armenia", "Calarcá", "Circasia", "Montenegro", "Quimbaya", "La Tebaida"];
 
 function useProfile() {
-  const user = getUser();
-  const isAdmin = user?.rol === "ADMIN_FARMACIA";
+  const sessionUser = getUser();
+  const isAdmin = sessionUser?.rol === "ADMIN_FARMACIA" || sessionUser?.rol === "administrador";
 
   const tabs = [
     { id: "datos", label: "Datos personales" },
@@ -17,23 +18,26 @@ function useProfile() {
 
   const [tab, setTab] = useState("datos");
   const [saved, setSaved] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [personal, setPersonal] = useState({
-    nombre: user?.nombre ?? "",
-    email: user?.email ?? "",
-    telefono: "310 456 7890",
+    nombre: sessionUser?.nombre_completo ?? sessionUser?.nombre ?? "",
+    email: sessionUser?.email ?? "",
+    telefono: "",
     ciudad: "Armenia",
   });
 
   const [pharmacy, setPharmacy] = useState({
-    nombre: user?.farmacia ?? "Droguería La Esperanza",
-    nit: "900.123.456-7",
-    direccion: "Cra 14 # 12-30, Armenia",
-    telefono: "606 741 2020",
+    id: sessionUser?.farmacia_id ?? "",
+    nombre: sessionUser?.farmacia_nombre ?? "",
+    nit: "",
+    direccion: "",
+    telefono: "",
     apertura: "07:00",
     cierre: "21:00",
-    latitud: "4.5360",
-    longitud: "-75.6740",
+    latitud: "",
+    longitud: "",
     activa: true,
     domicilio: true,
   });
@@ -44,24 +48,84 @@ function useProfile() {
       : { disponibilidad: true, reservaPorVencer: true, promociones: false, correo: true }
   );
 
-  const updatePersonal = (field) => (event) => setPersonal((c) => ({ ...c, [field]: event.target.value }));
-  const updatePharmacy = (field) => (event) => setPharmacy((c) => ({ ...c, [field]: event.target.value }));
-  const togglePharmacy = (field) => (value) => setPharmacy((c) => ({ ...c, [field]: value }));
-  const toggleNotification = (field) => (value) => setNotifications((c) => ({ ...c, [field]: value }));
+  // ── Cargar datos reales de la farmacia si el usuario es administrador ─────
+  useEffect(() => {
+    if (!isAdmin || !sessionUser?.farmacia_id) return;
+    farmaciasApi.obtener(sessionUser.farmacia_id)
+      .then((res) => {
+        const f = res.data;
+        setPharmacy((c) => ({
+          ...c,
+          id: f.id,
+          nombre: f.nombre_sucursal,
+          nit: f.nit,
+          direccion: f.direccion,
+          latitud: f.latitud ? String(f.latitud) : "",
+          longitud: f.longitud ? String(f.longitud) : "",
+          activa: f.activa,
+        }));
+      })
+      .catch(() => {/* silencioso si no hay farmacia */});
+  }, [isAdmin, sessionUser?.farmacia_id]);
 
-  const save = (event) => {
+  const updatePersonal = (field) => (event) =>
+    setPersonal((c) => ({ ...c, [field]: event.target.value }));
+
+  const updatePharmacy = (field) => (event) =>
+    setPharmacy((c) => ({ ...c, [field]: event.target.value }));
+
+  const togglePharmacy = (field) => (value) =>
+    setPharmacy((c) => ({ ...c, [field]: value }));
+
+  const toggleNotification = (field) => (value) =>
+    setNotifications((c) => ({ ...c, [field]: value }));
+
+  const save = async (event) => {
     event.preventDefault();
-    setSaved("Cambios guardados.");
-    setTimeout(() => setSaved(""), 3000);
+    setSaving(true);
+    setSaveError("");
+    setSaved("");
+
+    try {
+      if (tab === "datos" && sessionUser?.id) {
+        // Actualizar nombre del perfil en el backend
+        await usuariosApi.actualizar(sessionUser.id, {
+          nombre_completo: personal.nombre,
+        });
+        // Actualizar la sesión local con el nuevo nombre
+        setUser({ ...sessionUser, nombre_completo: personal.nombre });
+      }
+
+      if (tab === "farmacia" && pharmacy.id) {
+        // Actualizar datos de la farmacia en el backend
+        await farmaciasApi.actualizar(pharmacy.id, {
+          nombre_sucursal: pharmacy.nombre,
+          nit: pharmacy.nit,
+          direccion: pharmacy.direccion,
+          latitud: pharmacy.latitud ? parseFloat(pharmacy.latitud) : null,
+          longitud: pharmacy.longitud ? parseFloat(pharmacy.longitud) : null,
+          activa: pharmacy.activa,
+        });
+      }
+
+      setSaved("Cambios guardados correctamente.");
+      setTimeout(() => setSaved(""), 3000);
+    } catch (err) {
+      setSaveError(err.message || "Error al guardar los cambios.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return {
-    user, isAdmin, roleLabel: ROLES[user?.rol],
+    user: sessionUser,
+    isAdmin,
+    roleLabel: ROLES[sessionUser?.rol] || sessionUser?.rol,
     tabs, tab, setTab,
     personal, updatePersonal,
     pharmacy, updatePharmacy, togglePharmacy,
     notifications, toggleNotification,
-    saved, save,
+    saved, saving, saveError, save,
   };
 }
 

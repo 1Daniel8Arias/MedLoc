@@ -6,9 +6,15 @@ import { notificationsByRole } from "../../services/mockNotifications";
 
 function Header({ titulo }) {
     const user = getUser();
-    const name = user ? user.nombre : "Invitado";
-    const role = user ? ROLES[user.rol] : "";
-    const notifications = notificationsByRole[user?.rol] ?? [];
+    // El backend devuelve 'nombre_completo'; el mock legacy usaba 'nombre'
+    const name = user ? (user.nombre_completo || user.nombre || "Usuario") : "Invitado";
+    // Mapear rol del backend ("administrador") al label visible, o usar ROLES para mock
+    const rolKey = user?.rol === "administrador" ? "ADMIN_FARMACIA"
+        : user?.rol === "paciente" ? "PACIENTE"
+        : user?.rol;
+    const role = user ? (ROLES[rolKey] || user.rol || "") : "";
+    const notifications = notificationsByRole[rolKey] ?? [];
+
 
     return (
         <header className="header">

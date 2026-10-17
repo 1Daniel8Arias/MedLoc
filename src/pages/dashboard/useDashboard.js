@@ -1,11 +1,19 @@
-function useDashboard() {
-  const statistics = [
-    { id: 1, title: "Ventas de hoy", value: "$ 482.600", description: "18 ventas registradas", tone: "success" },
-    { id: 2, title: "Reservas pendientes", value: 3, description: "Esperando retiro", tone: "default" },
-    { id: 3, title: "Stock bajo", value: 3, description: "Medicamentos por reponer", tone: "warning" },
-    { id: 4, title: "Calificación", value: "4.6 ★", description: "128 reseñas", tone: "default" },
-  ];
+import { useEffect, useMemo, useState } from "react";
+import { getUser } from "../../services/session";
+import { inventarioApi, medicamentosApi, farmaciasApi } from "../../services/api";
 
+const STOCK_MINIMO_DEFAULT = 10; // umbral si no hay mínimo definido
+
+function useDashboard() {
+  const user = getUser();
+  const farmaciaId = user?.farmacia_id || null;
+
+  const [inventario, setInventario] = useState([]);
+  const [medicamentosMap, setMedicamentosMap] = useState({});
+  const [farmacia, setFarmacia] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Datos estáticos de ejemplo para gráficas (sin endpoint en el back aún)
   const weeklySales = [
     { day: "Lun", value: 320 },
     { day: "Mar", value: 410 },
@@ -14,27 +22,97 @@ function useDashboard() {
     { day: "Vie", value: 610 },
     { day: "Sáb", value: 740 },
     { day: "Dom", value: 482 },
-  ]; // miles de pesos
-
-  const pendingReservations = [
-    { id: 1, cliente: "María Fernanda Rojas", medicamento: "Losartán 50mg × 2", codigo: "483921", restante: "1 h 20 min" },
-    { id: 2, cliente: "Carlos Andrés Gómez", medicamento: "Ibuprofeno 400mg × 1", codigo: "175304", restante: "1 h 45 min" },
-    { id: 3, cliente: "Luz Marina Torres", medicamento: "Metformina 850mg × 3", codigo: "906118", restante: "20 min" },
   ];
 
-  const lowStock = [
-    { id: 1, medicamento: "Amoxicilina 500mg", stock: 0, minimo: 15 },
-    { id: 2, medicamento: "Ibuprofeno 400mg", stock: 4, minimo: 10 },
-    { id: 3, medicamento: "Losartán 50mg", stock: 8, minimo: 12 },
+  useEffect(() => {
+    if (!farmaciaId) return;
+    let cancelled = false;
+
+    async function cargar() {
+      setLoading(true);
+      try {
+        // Cargar datos de la farmacia y su inventario en paralelo
+        const [resF, resI] = await Promise.all([
+          farmaciasApi.obtener(farmaciaId),
+          inventarioApi.listarPorFarmacia(farmaciaId),
+        ]);
+        if (cancelled) return;
+
+        setFarmacia(resF.data);
+        const items = resI.data || [];
+        setInventario(items);
+
+        // Cargar nombres de medicamentos
+        const medMap = {};
+        await Promise.all(
+          items.map(async (item) => {
+            if (medMap[item.id_medicamento]) return;
+            try {
+              const resM = await medicamentosApi.obtener(item.id_medicamento);
+              if (!cancelled) medMap[item.id_medicamento] = resM.data;
+            } catch {/* ignorar */}
+          })
+        );
+        if (!cancelled) setMedicamentosMap(medMap);
+      } catch (err) {
+        console.error("Error cargando dashboard:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    cargar();
+    return () => { cancelled = true; };
+  }, [farmaciaId]);
+
+  // ── Estadísticas calculadas desde el inventario real ─────────────────────
+
+  const lowStock = useMemo(() =>
+    inventario
+      .filter((i) => i.stock_actual > 0 && i.stock_actual <= STOCK_MINIMO_DEFAULT)
+      .map((i) => ({
+        id: i.id_medicamento,
+        medicamento: medicamentosMap[i.id_medicamento]
+          ? `${medicamentosMap[i.id_medicamento].nombre_comercial}${
+              medicamentosMap[i.id_medicamento].concentracion
+                ? " " + medicamentosMap[i.id_medicamento].concentracion
+                : ""
+            }`
+          : i.id_medicamento,
+        stock: i.stock_actual,
+        minimo: STOCK_MINIMO_DEFAULT,
+      })),
+    [inventario, medicamentosMap]
+  );
+
+  const agotados = useMemo(
+    () => inventario.filter((i) => i.stock_actual === 0).length,
+    [inventario]
+  );
+
+  const statistics = [
+    { id: 1, title: "Ventas de hoy", value: "$ —", description: "Próximamente disponible", tone: "success" },
+    { id: 2, title: "Reservas pendientes", value: "—", description: "Próximamente disponible", tone: "default" },
+    { id: 3, title: "Stock bajo", value: lowStock.length, description: "Medicamentos por reponer", tone: "warning" },
+    { id: 4, title: "Agotados", value: agotados, description: "Sin unidades disponibles", tone: "danger" },
   ];
 
+  // Reseña más reciente (placeholder hasta tener endpoint de reseñas)
   const latestReview = {
-    autor: "Laura M.",
-    puntuacion: 5,
-    comentario: "Tenían el medicamento que no encontraba en ninguna parte. Atención rápida.",
+    autor: "—",
+    puntuacion: null,
+    comentario: "Las reseñas estarán disponibles próximamente.",
   };
 
-  return { statistics, weeklySales, pendingReservations, lowStock, latestReview };
+  return {
+    statistics,
+    weeklySales,
+    pendingReservations: [],   // endpoint de reservas pendiente
+    lowStock,
+    latestReview,
+    farmacia,
+    loading,
+  };
 }
 
 export default useDashboard;

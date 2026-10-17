@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useHashRoute from "../../hooks/useHashRoute";
 import { DEFAULT_LOCATION, distanceKm } from "../../services/geo";
 import { getUser, setUser, clearUser } from "../../services/session";
-import { registeredUsers, ROLES } from "../../services/users";
+import { authApi, inventarioApi, farmaciasApi } from "../../services/api";
+import { ROLES } from "../../services/users";
 
 const features = [
   { id: 1, title: "Búsqueda por cercanía", description: "Encuentra tu medicamento por nombre comercial o principio activo y mira primero las droguerías más cercanas." },
@@ -21,28 +22,44 @@ const roles = Object.values(ROLES);
 export const radiusOptions = [2, 5, 10];
 export const suggestions = ["Acetaminofén", "Ibuprofeno", "Losartán", "Omeprazol"];
 
-// Datos quemados: cada oferta = un medicamento disponible en una droguería.
-const offers = [
-  { id: 1, farmacia: "Droguería La Esperanza", direccion: "Cra 14 # 12-30, Armenia", telefono: "606 741 2020", lat: 4.5360, lng: -75.6740, medicamento: "Acetaminofén 500mg", principioActivo: "Acetaminofén", stock: 48, precio: 3200 },
-  { id: 2, farmacia: "Droguería La Esperanza", direccion: "Cra 14 # 12-30, Armenia", telefono: "606 741 2020", lat: 4.5360, lng: -75.6740, medicamento: "Ibuprofeno 400mg", principioActivo: "Ibuprofeno", stock: 4, precio: 5200 },
-  { id: 3, farmacia: "Farma Salud Centenario", direccion: "Av. Bolívar # 21-45, Armenia", telefono: "606 745 3311", lat: 4.5473, lng: -75.6735, medicamento: "Acetaminofén 500mg", principioActivo: "Acetaminofén", stock: 20, precio: 3500 },
-  { id: 4, farmacia: "Farma Salud Centenario", direccion: "Av. Bolívar # 21-45, Armenia", telefono: "606 745 3311", lat: 4.5473, lng: -75.6735, medicamento: "Losartán 50mg", principioActivo: "Losartán potásico", stock: 8, precio: 9200 },
-  { id: 5, farmacia: "Droguería Quindío Plus", direccion: "Cl 2 Sur # 18-10, Armenia", telefono: "606 749 1200", lat: 4.5170, lng: -75.6830, medicamento: "Omeprazol 20mg", principioActivo: "Omeprazol", stock: 16, precio: 4500 },
-  { id: 6, farmacia: "Droguería Quindío Plus", direccion: "Cl 2 Sur # 18-10, Armenia", telefono: "606 749 1200", lat: 4.5170, lng: -75.6830, medicamento: "Ibuprofeno 400mg", principioActivo: "Ibuprofeno", stock: 12, precio: 5000 },
-  { id: 7, farmacia: "Droguería San Rafael", direccion: "Cra 25 # 38-12, Calarcá", telefono: "606 742 8890", lat: 4.5300, lng: -75.6420, medicamento: "Losartán 50mg", principioActivo: "Losartán potásico", stock: 15, precio: 8900 },
-  { id: 8, farmacia: "Droguería San Rafael", direccion: "Cra 25 # 38-12, Calarcá", telefono: "606 742 8890", lat: 4.5300, lng: -75.6420, medicamento: "Acetaminofén 500mg", principioActivo: "Acetaminofén", stock: 33, precio: 3000 },
-  { id: 9, farmacia: "Botica del Parque", direccion: "Cl 40 # 24-05, Calarcá", telefono: "606 742 1005", lat: 4.5262, lng: -75.6455, medicamento: "Omeprazol 20mg", principioActivo: "Omeprazol", stock: 3, precio: 4800 },
-  { id: 10, farmacia: "Farmacia Vida Circasia", direccion: "Cra 14 # 6-20, Circasia", telefono: "606 747 5566", lat: 4.6180, lng: -75.6350, medicamento: "Losartán 50mg", principioActivo: "Losartán potásico", stock: 25, precio: 8700 },
-];
-
 const normalize = (text) =>
     text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Construye la lista de ofertas aplanando el inventario de todas las farmacias.
+ * Cada ítem = { farmacia, direccion, lat, lng, medicamento, principioActivo, stock, precio }
+ */
+function buildOffers(farmacias, inventarioMap, medicamentoMap) {
+  const result = [];
+  for (const f of farmacias) {
+    const items = inventarioMap[f.id] || [];
+    for (const item of items) {
+      const med = medicamentoMap[item.id_medicamento];
+      if (!med) continue;
+      result.push({
+        id: `${f.id}-${item.id_medicamento}`,
+        farmaciaId: f.id,
+        medicamentoId: item.id_medicamento,
+        farmacia: f.nombre_sucursal,
+        direccion: f.direccion,
+        lat: f.latitud || 4.536,
+        lng: f.longitud || -75.674,
+        medicamento: `${med.nombre_comercial}${med.concentracion ? " " + med.concentracion : ""}`,
+        principioActivo: med.principio_activo,
+        stock: item.stock_actual,
+        precio: item.precio_unitario,
+      });
+    }
+  }
+  return result;
+}
 
 function useLanding() {
   const { navigate } = useHashRoute();
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [user, setUserState] = useState(getUser);
   const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
   const [reservedIds, setReservedIds] = useState([]);
 
   const [query, setQuery] = useState("");
@@ -51,6 +68,70 @@ function useLanding() {
   const [location, setLocation] = useState({ ...DEFAULT_LOCATION, source: "example" });
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
+
+  // ── Datos desde la API ────────────────────────────────────────────────────
+  const [farmacias, setFarmacias] = useState([]);
+  const [inventarioMap, setInventarioMap] = useState({}); // { farmaciaId: [items] }
+  const [medicamentoMap, setMedicamentoMap] = useState({}); // { medId: med }
+  const [dataLoading, setDataLoading] = useState(false);
+
+  // Cargar farmacias e inventario al montar
+  useEffect(() => {
+    let cancelled = false;
+    async function cargarDatos() {
+      setDataLoading(true);
+      try {
+        // 1. Obtener farmacias activas
+        const resF = await farmaciasApi.listar(true);
+        if (cancelled) return;
+        const farmaciasData = resF.data || [];
+        setFarmacias(farmaciasData);
+
+        // 2. Para cada farmacia obtener su inventario
+        const invMap = {};
+        const medMap = {};
+        await Promise.all(
+          farmaciasData.map(async (f) => {
+            try {
+              const resI = await inventarioApi.listarPorFarmacia(f.id);
+              if (cancelled) return;
+              const items = resI.data || [];
+              invMap[f.id] = items;
+
+              // 3. Cargar datos de cada medicamento (si aún no los tenemos)
+              await Promise.all(
+                items.map(async (item) => {
+                  if (medMap[item.id_medicamento]) return;
+                  try {
+                    const { default: medicamentosApi } = await import("../../services/api").then(
+                      (m) => ({ default: m.medicamentosApi })
+                    );
+                    const resM = await medicamentosApi.obtener(item.id_medicamento);
+                    if (!cancelled) medMap[item.id_medicamento] = resM.data;
+                  } catch {/* ignorar errores individuales */}
+                })
+              );
+            } catch {/* ignorar errores por farmacia */}
+          })
+        );
+        if (!cancelled) {
+          setInventarioMap(invMap);
+          setMedicamentoMap(medMap);
+        }
+      } catch (err) {
+        console.error("Error cargando datos de farmacias:", err);
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
+    }
+    cargarDatos();
+    return () => { cancelled = true; };
+  }, []);
+
+  const offers = useMemo(
+    () => buildOffers(farmacias, inventarioMap, medicamentoMap),
+    [farmacias, inventarioMap, medicamentoMap]
+  );
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -88,48 +169,67 @@ function useLanding() {
         .map((o) => ({ ...o, distancia: distanceKm(location, o) }))
         .filter((o) => o.distancia <= radius)
         .sort((a, b) => a.distancia - b.distancia);
-  }, [query, radius, location]);
+  }, [query, radius, location, offers]);
 
   const goToAccess = (nextMode) => {
     setMode(nextMode);
     document.getElementById("acceso")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const enter = (account) => {
+  const enter = useCallback((account) => {
     setUser(account);
     setUserState(account);
     setAuthError("");
-    if (account.rol === "ADMIN_FARMACIA") navigate("/dashboard");
-  };
+    if (account.rol === "administrador" || account.rol === "ADMIN_FARMACIA") {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const form = new FormData(event.target);
     const email = form.get("email").trim().toLowerCase();
     const password = form.get("password");
 
-    if (mode === "login") {
-      const found = registeredUsers.find((u) => u.email === email && u.password === password);
-      if (!found) {
-        setAuthError("Correo o contraseña incorrectos. Revisa los datos e inténtalo de nuevo.");
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+      if (mode === "login") {
+        // Llamar al backend para verificar el usuario
+        const res = await authApi.login(email, password);
+        const userData = res.data;
+        // Mapear el rol del backend al formato del frontend
+        const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
+        enter({ ...userData, rol: rolFrontend });
         return;
       }
-      enter(found);
-      return;
-    }
 
-    if (password !== form.get("password2")) {
-      setAuthError("Las contraseñas no coinciden.");
-      return;
+      // Registro
+      if (password !== form.get("password2")) {
+        setAuthError("Las contraseñas no coinciden.");
+        return;
+      }
+
+      const rolLabel = form.get("rol");
+      // Convertir la etiqueta visible al valor del backend
+      const rolBackend = Object.entries(ROLES).find(([, v]) => v === rolLabel)?.[0]
+        ?.toLowerCase() || "paciente";
+      const nombre = form.get("nombre");
+
+      const res = await authApi.register({
+        nombre_completo: nombre,
+        email,
+        rol: rolBackend,
+      });
+      const userData = res.data;
+      const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
+      enter({ ...userData, rol: rolFrontend });
+    } catch (err) {
+      setAuthError(err.message || "Error de conexión con el servidor. Verifica que el backend esté activo.");
+    } finally {
+      setAuthLoading(false);
     }
-    if (registeredUsers.some((u) => u.email === email)) {
-      setAuthError("Ya existe una cuenta con ese correo. Ingresa con ella.");
-      return;
-    }
-    const rol = Object.keys(ROLES).find((key) => ROLES[key] === form.get("rol"));
-    const account = { id: Date.now(), nombre: form.get("nombre"), email, password, rol };
-    registeredUsers.push(account);
-    enter(account);
   };
 
   const logout = () => {
@@ -153,12 +253,13 @@ function useLanding() {
 
   return {
     mode, setMode: changeMode, handleSubmit, goToAccess,
-    user, authError, logout, reserve, reservedIds, goToPanel: () => navigate("/dashboard"),
+    user, authError, authLoading, logout, reserve, reservedIds,
+    goToPanel: () => navigate("/dashboard"),
     features, steps, roles,
     query, setQuery, radius, setRadius,
     view, setView,
     location, locating, locationError, requestLocation, useExampleLocation,
-    results,
+    results, dataLoading,
   };
 }
 
