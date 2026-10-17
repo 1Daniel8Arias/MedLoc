@@ -220,6 +220,7 @@ function useLanding() {
       const res = await authApi.register({
         nombre_completo: nombre,
         email,
+        password,
         rol: rolBackend,
       });
       const userData = res.data;
