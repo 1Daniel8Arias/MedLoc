@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import useHashRoute from "../../hooks/useHashRoute";
-import { DEFAULT_LOCATION, distanceKm } from "../../services/geo";
+import { DEFAULT_LOCATION, CITIES_PRESETS, distanceKm } from "../../services/geo";
 import { getUser, setUser, clearUser } from "../../services/session";
-import { authApi, inventarioApi, farmaciasApi } from "../../services/api";
+import { authApi, inventarioApi, farmaciasApi, medicamentosApi } from "../../services/api";
 import { ROLES } from "../../services/users";
 
 const features = [
@@ -12,45 +12,85 @@ const features = [
 ];
 
 const steps = [
-  { id: 1, title: "Busca", description: "Escribe el medicamento que necesitas." },
-  { id: 2, title: "Compara", description: "Revisa distancia, precio y unidades disponibles." },
+  { id: 1, title: "Busca o explora", description: "Consulta el catálogo completo de medicamentos o escribe el que necesitas." },
+  { id: 2, title: "Compara", description: "Revisa droguería, distancia, precio y unidades disponibles en existencias." },
   { id: 3, title: "Reserva", description: "Aparta el producto y recibe tu código de retiro." },
   { id: 4, title: "Recoge", description: "Presenta el código en la droguería y listo." },
 ];
 
 const roles = Object.values(ROLES);
-export const radiusOptions = [2, 5, 10];
-export const suggestions = ["Acetaminofén", "Ibuprofeno", "Losartán", "Omeprazol"];
+
+export const radiusOptions = [
+  { value: 5, label: "5 km (muy cerca)" },
+  { value: 10, label: "10 km (en mi zona)" },
+  { value: 25, label: "25 km (mi ciudad)" },
+  { value: 50, label: "50 km (área metropolitana)" },
+  { value: 100, label: "100 km (ciudades vecinas)" },
+  { value: 250, label: "250 km (región)" },
+  { value: 1000, label: "Todas las distancias (sin límite)" },
+];
+
+export const suggestions = ["Acetaminofén", "Advil", "Amoxidal", "Clarityne", "Omeprazol"];
 
 const normalize = (text) =>
-    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 /**
- * Construye la lista de ofertas aplanando el inventario de todas las farmacias.
- * Cada ítem = { farmacia, direccion, lat, lng, medicamento, principioActivo, stock, precio }
+ * Construye la lista de ofertas aplanando el inventario de todas las farmacias y el catálogo.
  */
-function buildOffers(farmacias, inventarioMap, medicamentoMap) {
+function buildOffers(farmacias, inventarioMap, medicamentoMap, allMeds = []) {
   const result = [];
+  const coveredMedIds = new Set();
+
   for (const f of farmacias) {
     const items = inventarioMap[f.id] || [];
     for (const item of items) {
       const med = medicamentoMap[item.id_medicamento];
       if (!med) continue;
+      coveredMedIds.add(item.id_medicamento);
       result.push({
         id: `${f.id}-${item.id_medicamento}`,
         farmaciaId: f.id,
         medicamentoId: item.id_medicamento,
         farmacia: f.nombre_sucursal,
         direccion: f.direccion,
-        lat: f.latitud || 4.536,
-        lng: f.longitud || -75.674,
+        nit: f.nit,
+        lat: Number(f.latitud) || 4.536,
+        lng: Number(f.longitud) || -75.674,
         medicamento: `${med.nombre_comercial}${med.concentracion ? " " + med.concentracion : ""}`,
+        nombreComercial: med.nombre_comercial,
         principioActivo: med.principio_activo,
+        presentacion: med.presentacion,
+        laboratorio: med.laboratorio,
         stock: item.stock_actual,
-        precio: item.precio_unitario,
+        precio: Number(item.precio_unitario),
       });
     }
   }
+
+  // Medicamentos del catálogo que aún no tengan inventario asignado
+  for (const med of allMeds) {
+    if (!coveredMedIds.has(med.id)) {
+      result.push({
+        id: `med-${med.id}`,
+        farmaciaId: null,
+        medicamentoId: med.id,
+        farmacia: "Consultar droguería",
+        direccion: "Catálogo general",
+        nit: "",
+        lat: 4.536,
+        lng: -75.674,
+        medicamento: `${med.nombre_comercial}${med.concentracion ? " " + med.concentracion : ""}`,
+        nombreComercial: med.nombre_comercial,
+        principioActivo: med.principio_activo,
+        presentacion: med.presentacion,
+        laboratorio: med.laboratorio,
+        stock: 0,
+        precio: 0,
+      });
+    }
+  }
+
   return result;
 }
 
@@ -63,63 +103,63 @@ function useLanding() {
   const [reservedIds, setReservedIds] = useState([]);
 
   const [query, setQuery] = useState("");
-  const [radius, setRadius] = useState(5);
+  const [radius, setRadius] = useState(1000); // 1000 = sin límite por defecto para mostrar el catálogo completo
   const [view, setView] = useState("list"); // "list" | "map"
-  const [location, setLocation] = useState({ ...DEFAULT_LOCATION, source: "example" });
+  const [location, setLocation] = useState(DEFAULT_LOCATION);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
 
+  // Farmacia seleccionada para ver su detalle y lista de productos
+  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+
   // ── Datos desde la API ────────────────────────────────────────────────────
   const [farmacias, setFarmacias] = useState([]);
+  const [allMedicamentos, setAllMedicamentos] = useState([]);
   const [inventarioMap, setInventarioMap] = useState({}); // { farmaciaId: [items] }
   const [medicamentoMap, setMedicamentoMap] = useState({}); // { medId: med }
   const [dataLoading, setDataLoading] = useState(false);
 
-  // Cargar farmacias e inventario al montar
+  // Cargar farmacias, catálogo completo e inventario al montar
   useEffect(() => {
     let cancelled = false;
     async function cargarDatos() {
       setDataLoading(true);
       try {
-        // 1. Obtener farmacias activas
-        const resF = await farmaciasApi.listar(true);
+        const [resF, resM] = await Promise.all([
+          farmaciasApi.listar(true),
+          medicamentosApi.listar(),
+        ]);
         if (cancelled) return;
-        const farmaciasData = resF.data || [];
-        setFarmacias(farmaciasData);
 
-        // 2. Para cada farmacia obtener su inventario
-        const invMap = {};
+        const farmaciasData = resF.data || [];
+        const medsData = resM.data || [];
+        setFarmacias(farmaciasData);
+        setAllMedicamentos(medsData);
+
         const medMap = {};
+        for (const m of medsData) {
+          medMap[m.id] = m;
+        }
+        setMedicamentoMap(medMap);
+
+        const invMap = {};
         await Promise.all(
           farmaciasData.map(async (f) => {
             try {
               const resI = await inventarioApi.listarPorFarmacia(f.id);
               if (cancelled) return;
-              const items = resI.data || [];
-              invMap[f.id] = items;
-
-              // 3. Cargar datos de cada medicamento (si aún no los tenemos)
-              await Promise.all(
-                items.map(async (item) => {
-                  if (medMap[item.id_medicamento]) return;
-                  try {
-                    const { default: medicamentosApi } = await import("../../services/api").then(
-                      (m) => ({ default: m.medicamentosApi })
-                    );
-                    const resM = await medicamentosApi.obtener(item.id_medicamento);
-                    if (!cancelled) medMap[item.id_medicamento] = resM.data;
-                  } catch {/* ignorar errores individuales */}
-                })
-              );
-            } catch {/* ignorar errores por farmacia */}
+              invMap[f.id] = resI.data || [];
+            } catch {
+              // Continuar con las demás farmacias si una falla
+            }
           })
         );
+
         if (!cancelled) {
           setInventarioMap(invMap);
-          setMedicamentoMap(medMap);
         }
       } catch (err) {
-        console.error("Error cargando datos de farmacias:", err);
+        console.error("Error cargando datos de farmacias y medicamentos:", err);
       } finally {
         if (!cancelled) setDataLoading(false);
       }
@@ -129,9 +169,46 @@ function useLanding() {
   }, []);
 
   const offers = useMemo(
-    () => buildOffers(farmacias, inventarioMap, medicamentoMap),
-    [farmacias, inventarioMap, medicamentoMap]
+    () => buildOffers(farmacias, inventarioMap, medicamentoMap, allMedicamentos),
+    [farmacias, inventarioMap, medicamentoMap, allMedicamentos]
   );
+
+  // Construye la lista de farmacias con su catálogo completo de productos e inventario
+  const pharmaciesWithInventory = useMemo(() => {
+    return farmacias.map((f) => {
+      const items = inventarioMap[f.id] || [];
+      const dist = distanceKm(location, {
+        lat: Number(f.latitud) || 4.536,
+        lng: Number(f.longitud) || -75.674,
+      });
+
+      const productos = items.map((item) => {
+        const med = medicamentoMap[item.id_medicamento] || {};
+        return {
+          id: item.id_medicamento,
+          medicamento: `${med.nombre_comercial || "Medicamento"}${med.concentracion ? " " + med.concentracion : ""}`,
+          nombreComercial: med.nombre_comercial || "",
+          principioActivo: med.principio_activo || "",
+          presentacion: med.presentacion || "",
+          laboratorio: med.laboratorio || "",
+          stock: item.stock_actual,
+          precio: Number(item.precio_unitario),
+        };
+      });
+
+      return {
+        id: f.id,
+        nombre: f.nombre_sucursal,
+        nit: f.nit,
+        direccion: f.direccion,
+        lat: Number(f.latitud) || 4.536,
+        lng: Number(f.longitud) || -75.674,
+        distancia: dist,
+        productos,
+        totalProductos: productos.length,
+      };
+    }).sort((a, b) => a.distancia - b.distancia);
+  }, [farmacias, inventarioMap, medicamentoMap, location]);
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -142,37 +219,72 @@ function useLanding() {
     setLocationError("");
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, source: "gps" });
+          setLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            source: "gps",
+            label: "Mi ubicación GPS",
+          });
           setLocating(false);
         },
         () => {
-          setLocationError("No pudimos acceder a tu ubicación. Usa la ubicación de ejemplo o activa el permiso.");
+          setLocationError("No pudimos acceder a tu GPS. Selecciona una ciudad de referencia.");
           setLocating(false);
         }
     );
   };
 
-  const useExampleLocation = () => {
-    setLocation({ ...DEFAULT_LOCATION, source: "example" });
+  const selectCityPreset = (city) => {
+    setLocation({
+      lat: city.lat,
+      lng: city.lng,
+      source: "preset",
+      label: city.label,
+    });
     setLocationError("");
   };
 
+  // ── FILTRADO ESTRICTO POR DISTANCIA Y POR TÉRMINO DE BÚSQUEDA ──────────────
   const results = useMemo(() => {
     const term = normalize(query.trim());
-    if (!term) return [];
-    return offers
-        .filter(
-            (o) =>
-                normalize(o.medicamento).includes(term) ||
-                normalize(o.principioActivo).includes(term)
-        )
-        .map((o) => ({ ...o, distancia: distanceKm(location, o) }))
-        .filter((o) => o.distancia <= radius)
-        .sort((a, b) => a.distancia - b.distancia);
+    const isUnlimited = radius >= 1000 || radius === "all";
+
+    // 1. Calculamos la distancia para cada oferta según la ubicación actual/elegida
+    const withDistance = offers.map((o) => ({
+      ...o,
+      distancia: distanceKm(location, o),
+    }));
+
+    // 2. Filtramos de acuerdo a la distancia seleccionada
+    let filtered = withDistance;
+    if (!isUnlimited && radius > 0) {
+      filtered = filtered.filter((o) => o.distancia <= radius);
+    }
+
+    // 3. Filtramos por término de búsqueda (si el usuario escribió algo)
+    if (term) {
+      filtered = filtered.filter(
+        (o) =>
+          normalize(o.medicamento).includes(term) ||
+          normalize(o.principioActivo).includes(term) ||
+          normalize(o.laboratorio).includes(term) ||
+          normalize(o.farmacia).includes(term)
+      );
+    }
+
+    return filtered.sort((a, b) => a.distancia - b.distancia);
   }, [query, radius, location, offers]);
+
+  // Farmacias a mostrar en el mapa (filtradas por el radio de distancia)
+  const mapPharmacies = useMemo(() => {
+    const isUnlimited = radius >= 1000 || radius === "all";
+    if (isUnlimited) return pharmaciesWithInventory;
+    return pharmaciesWithInventory.filter((f) => f.distancia <= radius);
+  }, [pharmaciesWithInventory, radius]);
 
   const goToAccess = (nextMode) => {
     setMode(nextMode);
+    setAuthError("");
     document.getElementById("acceso")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -196,10 +308,8 @@ function useLanding() {
 
     try {
       if (mode === "login") {
-        // Llamar al backend para verificar el usuario
         const res = await authApi.login(email, password);
         const userData = res.data;
-        // Mapear el rol del backend al formato del frontend
         const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
         enter({ ...userData, rol: rolFrontend });
         return;
@@ -212,7 +322,6 @@ function useLanding() {
       }
 
       const rolLabel = form.get("rol");
-      // Convertir la etiqueta visible al valor del backend
       const rolBackend = Object.entries(ROLES).find(([, v]) => v === rolLabel)?.[0]
         ?.toLowerCase() || "paciente";
       const nombre = form.get("nombre");
@@ -227,7 +336,7 @@ function useLanding() {
       const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
       enter({ ...userData, rol: rolFrontend });
     } catch (err) {
-      setAuthError(err.message || "Error de conexión con el servidor. Verifica que el backend esté activo.");
+      setAuthError(err.message || "Correo o contraseña incorrectos.");
     } finally {
       setAuthLoading(false);
     }
@@ -259,8 +368,11 @@ function useLanding() {
     features, steps, roles,
     query, setQuery, radius, setRadius,
     view, setView,
-    location, locating, locationError, requestLocation, useExampleLocation,
+    location, locating, locationError, requestLocation, selectCityPreset,
+    citiesPresets: CITIES_PRESETS,
     results, dataLoading,
+    pharmaciesWithInventory, mapPharmacies,
+    selectedPharmacy, setSelectedPharmacy,
   };
 }
 

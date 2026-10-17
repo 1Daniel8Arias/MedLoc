@@ -11,20 +11,17 @@ import useLanding, { radiusOptions, suggestions } from "./useLanding";
 function Landing() {
   const {
     mode, setMode, handleSubmit, goToAccess, features, steps, roles,
+    user, authError, authLoading, logout, goToPanel,
     query, setQuery, radius, setRadius, view, setView,
-    location, locating, locationError, requestLocation, useExampleLocation,
-    results,
+    location, locating, locationError, requestLocation, selectCityPreset, citiesPresets,
+    results, dataLoading,
+    mapPharmacies,
+    selectedPharmacy, setSelectedPharmacy,
   } = useLanding();
+
   const isLogin = mode === "login";
   const hasQuery = query.trim().length > 0;
-
-  const markers = results.map((r) => ({
-    id: r.id,
-    lat: r.lat,
-    lng: r.lng,
-    title: r.farmacia,
-    subtitle: `${r.medicamento} · ${formatCurrency(r.precio)} · ${formatDistance(r.distancia)}`,
-  }));
+  const isUnlimited = radius >= 1000;
 
   return (
       <div className="landing">
@@ -34,9 +31,19 @@ function Landing() {
             <span>MedLoc</span>
           </div>
           <nav className="landing__links">
-            <a href="#buscar">Buscar medicamento</a>
+            <a href="#catalogo">Medicamentos y Droguerías</a>
             <a href="#como-funciona">Cómo funciona</a>
-            <a href="#acceso" onClick={() => setMode("login")}>Ingresar</a>
+            {user ? (
+              <div className="landing__user-nav">
+                <span>Hola, {user.nombre_completo || user.email}</span>
+                {(user.rol === "administrador" || user.rol === "ADMIN_FARMACIA") && (
+                  <Button size="sm" variant="secondary" onClick={goToPanel}>Panel Farmacia</Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={logout}>Cerrar sesión</Button>
+              </div>
+            ) : (
+              <a href="#acceso" onClick={() => setMode("login")}>Ingresar</a>
+            )}
           </nav>
         </header>
 
@@ -44,43 +51,77 @@ function Landing() {
           <div className="landing__hero-text">
             <h1>Tu medicamento, en la droguería más cercana</h1>
             <p>
-              Busca sin crear cuenta. Te mostramos qué droguerías cerca de ti tienen existencias.
+              Filtra medicamentos por cercanía en tiempo real. Consulta precios, existencias y ubicación de droguerías.
             </p>
 
             <div className="landing__search" id="buscar">
               <SearchBar
                   value={query}
                   onChange={setQuery}
-                  placeholder="Nombre comercial o principio activo"
+                  placeholder="Nombre comercial o principio activo (ej. Acetaminofén, Advil...)"
                   aria-label="Buscar medicamento"
               />
               <div className="landing__suggestions">
                 {suggestions.map((s) => (
-                    <button key={s} onClick={() => setQuery(s)}>{s}</button>
+                    <button
+                      key={s}
+                      className={query.toLowerCase() === s.toLowerCase() ? "is-active" : ""}
+                      onClick={() => setQuery(query.toLowerCase() === s.toLowerCase() ? "" : s)}
+                    >
+                      {s}
+                    </button>
                 ))}
+                {hasQuery && (
+                  <button className="landing__clear-search" onClick={() => setQuery("")}>
+                    ✕ Ver todos los medicamentos
+                  </button>
+                )}
               </div>
 
+              {/* Opciones de filtrado por distancia y ubicación */}
               <div className="landing__search-options">
-                <label>
-                  Radio de búsqueda
-                  <select value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
-                    {radiusOptions.map((r) => (
-                        <option key={r} value={r}>{r} km</option>
+                <div className="landing__filter-group">
+                  <label htmlFor="radius-select">
+                    Distancia máxima:
+                  </label>
+                  <select
+                    id="radius-select"
+                    value={radius}
+                    onChange={(e) => setRadius(Number(e.target.value))}
+                    className="landing__select"
+                  >
+                    {radiusOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                </label>
-                <Button variant="secondary" size="sm" onClick={requestLocation} disabled={locating}>
-                  {locating ? "Ubicando..." : "Usar mi ubicación"}
-                </Button>
-                <button className="landing__link-btn" onClick={useExampleLocation}>
-                  Ubicación de ejemplo (Armenia)
-                </button>
+                </div>
+
+                <div className="landing__city-pills">
+                  <span className="landing__city-label">Ciudad de referencia:</span>
+                  {citiesPresets.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`landing__city-btn ${location.label === c.label ? "is-active" : ""}`}
+                      onClick={() => selectCityPreset(c)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                  <Button
+                    variant={location.source === "gps" ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={requestLocation}
+                    disabled={locating}
+                  >
+                    {locating ? "Ubicando..." : "📍 Mi GPS"}
+                  </Button>
+                </div>
               </div>
 
               <p className="landing__location">
-                {location.source === "gps"
-                    ? "Buscando cerca de tu ubicación actual."
-                    : "Buscando cerca del centro de Armenia (ubicación de ejemplo)."}
+                📍 Centro de búsqueda: <strong>{location.label || "Coordenadas fijadas"}</strong>
+                {!isUnlimited && ` · Filtrando a menos de ${radius} km`}
               </p>
               {locationError && <p className="landing__error">{locationError}</p>}
             </div>
@@ -109,6 +150,20 @@ function Landing() {
             <form className="landing__form" onSubmit={handleSubmit}>
               <h2>{isLogin ? "Bienvenido de nuevo" : "Crea tu cuenta"}</h2>
 
+              {authError && (
+                <div className="landing__auth-alert" role="alert">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <div className="landing__auth-alert-content">
+                    <strong>Acceso denegado</strong>
+                    <span>{authError}</span>
+                  </div>
+                </div>
+              )}
+
               {!isLogin && (
                   <>
                     <FormField id="nombre" label="Nombre completo" name="nombre" required />
@@ -117,15 +172,37 @@ function Landing() {
                   </>
               )}
 
-              <FormField id="email" label="Correo electrónico" name="email" type="email" required />
-              <FormField id="password" label="Contraseña" name="password" type="password" required />
+              <FormField
+                id="email"
+                label="Correo electrónico"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+              />
+
+              <FormField
+                id="password"
+                label="Contraseña"
+                name="password"
+                type="password"
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                required
+              />
 
               {!isLogin && (
-                  <FormField id="password2" label="Confirmar contraseña" name="password2" type="password" required />
+                  <FormField
+                    id="password2"
+                    label="Confirmar contraseña"
+                    name="password2"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                  />
               )}
 
-              <Button type="submit" size="lg" fullWidth>
-                {isLogin ? "Ingresar" : "Crear cuenta"}
+              <Button type="submit" size="lg" fullWidth disabled={authLoading}>
+                {authLoading ? "Verificando..." : (isLogin ? "Ingresar" : "Crear cuenta")}
               </Button>
 
               <p className="landing__switch">
@@ -138,73 +215,213 @@ function Landing() {
           </div>
         </section>
 
-        <section className="landing__results">
+        {/* Sección de Catálogo / Resultados / Mapa */}
+        <section className="landing__results" id="catalogo">
           <div className="landing__results-header">
             <div>
-              <h2>Resultados cerca de ti</h2>
+              <h2>{hasQuery ? `Resultados para "${query.trim()}"` : "Medicamentos disponibles"}</h2>
               <p>
-                {hasQuery
-                    ? `${results.length} ${results.length === 1 ? "resultado" : "resultados"} para "${query.trim()}" en ${radius} km`
-                    : "Escribe un medicamento arriba para ver dónde conseguirlo."}
+                {results.length > 0 ? (
+                  isUnlimited ? (
+                    `Mostrando ${results.length} ${results.length === 1 ? "medicamento disponible" : "medicamentos disponibles"} ordenados por cercanía.`
+                  ) : (
+                    `Mostrando ${results.length} ${results.length === 1 ? "medicamento disponible" : "medicamentos disponibles"} a menos de ${radius} km de ${location.label || "tu ubicación"}.`
+                  )
+                ) : (
+                  `No hay medicamentos encontrados a menos de ${radius} km de ${location.label || "tu ubicación"}.`
+                )}
               </p>
             </div>
 
             <div className="landing__toggle" role="group" aria-label="Forma de visualización">
               <button className={view === "list" ? "is-active" : ""} onClick={() => setView("list")}>
-                Lista
+                Lista ({results.length})
               </button>
               <button className={view === "map" ? "is-active" : ""} onClick={() => setView("map")}>
-                Mapa
+                🗺️ Mapa ({mapPharmacies.length} droguerías)
               </button>
             </div>
           </div>
 
-          {!hasQuery && (
-              <p className="landing__hint">
-                Prueba con "Acetaminofén", "Losartán" o el principio activo que necesites.
-              </p>
+          {dataLoading && (
+            <p className="landing__hint">Cargando inventario de medicamentos en tiempo real...</p>
           )}
 
-          {hasQuery && results.length === 0 && (
+          {!dataLoading && results.length === 0 && (
+            <div className="landing__empty-box">
               <p className="landing__hint">
-                No encontramos droguerías con ese medicamento en {radius} km. Amplía el radio o revisa el nombre.
+                {hasQuery
+                  ? `No encontramos droguerías con "${query.trim()}" en un radio de ${isUnlimited ? "cualquier distancia" : `${radius} km`}.`
+                  : `No hay droguerías registradas a menos de ${radius} km de ${location.label || "tu ubicación"}.`}
               </p>
+              <div className="landing__empty-actions">
+                <Button variant="secondary" size="sm" onClick={() => setRadius(1000)}>
+                  Ampliar a todas las distancias
+                </Button>
+                <button className="landing__link-btn" onClick={() => selectCityPreset(citiesPresets[0])}>
+                  Probar con Bogotá
+                </button>
+                <button className="landing__link-btn" onClick={() => selectCityPreset(citiesPresets[1])}>
+                  Probar con Medellín
+                </button>
+              </div>
+            </div>
           )}
 
-          {hasQuery && view === "list" && (
+          {/* VISTA DE LISTA */}
+          {results.length > 0 && view === "list" && (
               <div className="landing__list">
                 {results.map((r) => (
                     <article key={r.id} className="offer">
                       <div className="offer__main">
-                        <h3>{r.medicamento}</h3>
-                        <p className="offer__pharmacy">{r.farmacia}</p>
-                        <p className="offer__address">{r.direccion} · {r.telefono}</p>
+                        <div className="offer__title-row">
+                          <h3>{r.medicamento}</h3>
+                          {r.principioActivo && (
+                            <span className="offer__active-badge">Activo: {r.principioActivo}</span>
+                          )}
+                        </div>
+                        <p className="offer__pharmacy">
+                          📍 {r.farmacia}
+                          {r.nit && <span className="offer__nit"> · NIT: {r.nit}</span>}
+                        </p>
+                        <p className="offer__address">
+                          {r.direccion} {r.laboratorio && `· Lab: ${r.laboratorio}`}
+                        </p>
                       </div>
+
                       <div className="offer__meta">
                         <strong className="offer__distance">{formatDistance(r.distancia)}</strong>
-                        <Badge tone={r.stock <= 5 ? "warning" : "success"}>
-                          {r.stock <= 5 ? `Quedan ${r.stock}` : `${r.stock} disponibles`}
-                        </Badge>
-                        <span className="offer__price">{formatCurrency(r.precio)}</span>
+                        {r.stock > 0 ? (
+                          <Badge tone={r.stock <= 5 ? "warning" : "success"}>
+                            {r.stock <= 5 ? `Quedan ${r.stock}` : `${r.stock} disponibles`}
+                          </Badge>
+                        ) : (
+                          <Badge tone="neutral">Consultar disponibilidad</Badge>
+                        )}
+                        <span className="offer__price">
+                          {r.precio > 0 ? formatCurrency(r.precio) : "Consultar precio"}
+                        </span>
                       </div>
-                      <Button size="sm" onClick={() => goToAccess("register")}>
-                        Reservar
-                      </Button>
+
+                      <div className="offer__actions">
+                        <Button size="sm" onClick={() => goToAccess("register")}>
+                          Reservar
+                        </Button>
+                        <button
+                          type="button"
+                          className="offer__map-link"
+                          onClick={() => {
+                            setView("map");
+                            const found = mapPharmacies.find((p) => p.id === r.farmaciaId);
+                            if (found) setSelectedPharmacy(found);
+                          }}
+                        >
+                          Ver en mapa
+                        </button>
+                      </div>
                     </article>
                 ))}
               </div>
           )}
 
-          {hasQuery && view === "map" && (
-              <MedMap center={location} radiusKm={radius} markers={markers} />
+          {/* VISTA DE MAPA INTERACTIVO */}
+          {view === "map" && (
+            <div className="landing__map-wrapper">
+              <div className="landing__map-banner">
+                <span>💡 <strong>Consejo:</strong> Haz clic en cualquier droguería (✚) en el mapa para ver su información y los medicamentos que maneja.</span>
+              </div>
+              <MedMap
+                center={location}
+                radiusKm={radius}
+                pharmacies={mapPharmacies}
+                onSelectPharmacy={setSelectedPharmacy}
+                selectedPharmacyId={selectedPharmacy?.id}
+              />
+            </div>
           )}
 
-          {hasQuery && results.length > 0 && (
+          {results.length > 0 && (
               <p className="landing__note">
-                Para reservar necesitas una cuenta. Buscar siempre es gratis y sin registro.
+                ℹ️ Para apartar medicamentos necesitas una cuenta. Buscar y explorar el catálogo siempre es libre y sin costo.
               </p>
           )}
         </section>
+
+        {/* MODAL / PANEL DE DETALLE DE FARMACIA Y SUS PRODUCTOS */}
+        {selectedPharmacy && (
+          <div className="pharmacy-modal__backdrop" onClick={() => setSelectedPharmacy(null)}>
+            <div className="pharmacy-modal" onClick={(e) => e.stopPropagation()}>
+              <header className="pharmacy-modal__header">
+                <div>
+                  <div className="pharmacy-modal__badge-row">
+                    <span className="pharmacy-modal__badge">Droguería</span>
+                    <span className="pharmacy-modal__dist-badge">📏 {formatDistance(selectedPharmacy.distancia)} de tu ubicación</span>
+                  </div>
+                  <h2>{selectedPharmacy.nombre}</h2>
+                  <p className="pharmacy-modal__address">📍 {selectedPharmacy.direccion} {selectedPharmacy.nit && `· NIT: ${selectedPharmacy.nit}`}</p>
+                </div>
+                <button
+                  type="button"
+                  className="pharmacy-modal__close"
+                  onClick={() => setSelectedPharmacy(null)}
+                  aria-label="Cerrar detalle"
+                >
+                  ✕
+                </button>
+              </header>
+
+              <div className="pharmacy-modal__body">
+                <h3>📦 Productos disponibles en esta droguería ({(selectedPharmacy.productos || []).length}):</h3>
+                
+                {(!selectedPharmacy.productos || selectedPharmacy.productos.length === 0) ? (
+                  <p className="pharmacy-modal__empty">Esta droguería aún no tiene productos registrados en su inventario activo.</p>
+                ) : (
+                  <div className="pharmacy-modal__products-list">
+                    {selectedPharmacy.productos.map((prod) => (
+                      <div key={prod.id} className="pharmacy-modal__product-item">
+                        <div className="pharmacy-modal__prod-info">
+                          <h4>{prod.medicamento}</h4>
+                          {prod.principioActivo && (
+                            <span className="pharmacy-modal__prod-active">Principio activo: {prod.principioActivo}</span>
+                          )}
+                          <p className="pharmacy-modal__prod-meta">
+                            {prod.presentacion && `Presentación: ${prod.presentacion}`}
+                            {prod.laboratorio && ` · Lab: ${prod.laboratorio}`}
+                          </p>
+                        </div>
+
+                        <div className="pharmacy-modal__prod-pricing">
+                          <span className="pharmacy-modal__prod-price">{formatCurrency(prod.precio)}</span>
+                          <Badge tone={prod.stock <= 5 ? "warning" : "success"}>
+                            {prod.stock <= 5 ? `Quedan ${prod.stock}` : `${prod.stock} disponibles`}
+                          </Badge>
+                          <Button size="sm" onClick={() => {
+                            setSelectedPharmacy(null);
+                            goToAccess("register");
+                          }}>
+                            Reservar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <footer className="pharmacy-modal__footer">
+                <Button variant="secondary" onClick={() => setSelectedPharmacy(null)}>
+                  Cerrar
+                </Button>
+                <Button onClick={() => {
+                  setSelectedPharmacy(null);
+                  goToAccess("register");
+                }}>
+                  Crear cuenta para apartar
+                </Button>
+              </footer>
+            </div>
+          </div>
+        )}
 
         <section className="landing__section" id="beneficios">
           <h2>Menos recorridos, más tiempo para tu salud</h2>

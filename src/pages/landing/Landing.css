@@ -134,3 +134,405 @@
   .offer__meta { flex-direction: row; align-items: center; flex-wrap: wrap; }
   .landing__links a:not(:last-child) { display: none; }
 }
+
+/* ===== Alerta de Autenticación ===== */
+.landing__auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  color: #991b1b;
+  animation: authAlertSlide 0.22s ease-out;
+}
+
+.landing__auth-alert svg {
+  flex-shrink: 0;
+  color: #dc2626;
+  margin-top: 1px;
+}
+
+.landing__auth-alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.landing__auth-alert-content strong {
+  font-size: 13.5px;
+  color: #991b1b;
+}
+
+.landing__auth-alert-content span {
+  font-size: 13px;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
+@keyframes authAlertSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Mejoras del catálogo de medicamentos ===== */
+.offer__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.offer__active-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.landing__suggestions button.is-active {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.landing__clear-search {
+  border-color: rgb(239 68 68 / 50%) !important;
+  color: #fca5a5 !important;
+}
+
+.landing__clear-search:hover {
+  background: rgb(239 68 68 / 20%) !important;
+}
+
+.landing__user-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #e2e8f0;
+}
+
+/* ===== Selector de Distancia y Filtros ===== */
+.landing__filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing__select {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  color: #0f172a;
+  cursor: pointer;
+  outline: none;
+}
+.landing__select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 20%);
+}
+
+.landing__city-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.landing__city-label {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.landing__city-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.landing__city-btn:hover {
+  background: rgb(255 255 255 / 15%);
+  color: #fff;
+}
+
+.landing__city-btn.is-active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgb(96 165 250 / 40%);
+}
+
+.offer__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.offer__map-link {
+  border: none;
+  background: none;
+  color: #2563eb;
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.offer__map-link:hover {
+  color: #1d4ed8;
+}
+
+.offer__nit {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.landing__empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+}
+.landing__empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.landing__map-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing__map-banner {
+  padding: 10px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e40af;
+  font-size: 13.5px;
+}
+
+/* ===== Modal Detalle de Farmacia y sus Productos ===== */
+.pharmacy-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 60%);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.pharmacy-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 25%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.22s ease-out;
+}
+
+.pharmacy-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 28px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pharmacy-modal__badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pharmacy-modal__badge {
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.pharmacy-modal__dist-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.pharmacy-modal__header h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.pharmacy-modal__address {
+  margin: 0;
+  color: #64748b;
+  font-size: 13.5px;
+}
+
+.pharmacy-modal__close {
+  background: #f1f5f9;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #475569;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.pharmacy-modal__close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.pharmacy-modal__body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pharmacy-modal__body h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.pharmacy-modal__empty {
+  color: #64748b;
+  font-size: 14px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.pharmacy-modal__products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pharmacy-modal__product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+.pharmacy-modal__product-item:hover {
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.pharmacy-modal__prod-info h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.pharmacy-modal__prod-active {
+  display: inline-block;
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.pharmacy-modal__prod-meta {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pharmacy-modal__prod-pricing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.pharmacy-modal__prod-price {
+  font-size: 17px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.pharmacy-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 28px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+

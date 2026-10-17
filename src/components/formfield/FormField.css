@@ -1,6 +1,8 @@
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field__label { color: #334155; font-size: 13px; font-weight: 600; }
 .field__control {
+  width: 100%;
+  box-sizing: border-box;
   padding: 11px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -8,5 +10,45 @@
   font: inherit;
   font-size: 14px;
   color: #0f172a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .field__control:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 15%); }
+
+/* Wrapper para campos con contraseña y botón de ver */
+.field__password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.field__control--password {
+  padding-right: 44px;
+}
+
+.field__toggle-password {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.field__toggle-password:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+.field__toggle-password:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
