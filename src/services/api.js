@@ -1,7 +1,7 @@
 /**
  * MedLoc - Cliente API centralizado
  * Todas las llamadas al backend Flask pasan por aquí.
- * El proxy de Vite redirige /api → http://localhost:5000
+ * El proxy de desarrollo o nginx redirige /api al backend.
  */
 
 const BASE = "/api/v1";
