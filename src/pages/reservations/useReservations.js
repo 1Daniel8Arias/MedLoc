@@ -1,61 +1,84 @@
-import { useMemo, useState } from "react";
-
-// Estados según el modelo de datos: PENDIENTE, RECOGIDA, CANCELADA, EXPIRADA
-const initialReservations = [
-  { id: 1, codigoRetiro: "483921", cliente: "María Fernanda Rojas", telefono: "310 456 7890", medicamento: "Losartán 50mg", cantidad: 2, fecha: "13 oct · 9:15 a. m.", tiempoRestante: "1 h 20 min", estado: "PENDIENTE" },
-  { id: 2, codigoRetiro: "175304", cliente: "Carlos Andrés Gómez", telefono: "315 220 1144", medicamento: "Ibuprofeno 400mg", cantidad: 1, fecha: "13 oct · 9:40 a. m.", tiempoRestante: "1 h 45 min", estado: "PENDIENTE" },
-  { id: 3, codigoRetiro: "906118", cliente: "Luz Marina Torres", telefono: "300 987 6543", medicamento: "Metformina 850mg", cantidad: 3, fecha: "13 oct · 8:05 a. m.", tiempoRestante: "20 min", estado: "PENDIENTE" },
-  { id: 4, codigoRetiro: "621047", cliente: "Julián Restrepo", telefono: "320 111 2233", medicamento: "Acetaminofén 500mg", cantidad: 2, fecha: "12 oct · 4:30 p. m.", tiempoRestante: "—", estado: "RECOGIDA" },
-  { id: 5, codigoRetiro: "338275", cliente: "Ana Sofía Ríos", telefono: "311 654 3210", medicamento: "Omeprazol 20mg", cantidad: 1, fecha: "12 oct · 11:10 a. m.", tiempoRestante: "—", estado: "CANCELADA" },
-  { id: 6, codigoRetiro: "794560", cliente: "Pedro Pablo Mejía", telefono: "314 888 0099", medicamento: "Loratadina 10mg", cantidad: 1, fecha: "11 oct · 2:00 p. m.", tiempoRestante: "—", estado: "EXPIRADA" },
-];
+import { useEffect, useMemo, useState } from "react";
+import { getUser } from "../../services/session";
+import { reservasApi } from "../../services/api";
 
 export const statusConfig = {
-  PENDIENTE: { label: "Pendiente", tone: "warning" },
-  RECOGIDA: { label: "Recogida", tone: "success" },
-  CANCELADA: { label: "Cancelada", tone: "neutral" },
-  EXPIRADA: { label: "Expirada", tone: "danger" },
+  pendiente: { label: "Pendiente", tone: "warning" },
+  confirmada: { label: "Confirmada", tone: "success" },
+  lista_para_retiro: { label: "Lista para retiro", tone: "success" },
+  retirada: { label: "Retirada", tone: "success" },
+  cancelada: { label: "Cancelada", tone: "neutral" },
+  expirada: { label: "Expirada", tone: "danger" },
 };
 
-export const filters = ["TODAS", "PENDIENTE", "RECOGIDA", "CANCELADA", "EXPIRADA"];
+export const filters = ["TODAS", ...Object.keys(statusConfig)];
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString("es-CO") : "—";
+}
+
+function normalizeReservation(reservation) {
+  const detail = reservation.detalles?.[0];
+  return {
+    ...reservation,
+    codigoRetiro: reservation.codigo_retiro || "—",
+    cliente: reservation.cliente || "Cliente",
+    medicamento: detail?.medicamento || "Sin detalle",
+    cantidad: detail?.cantidad || 0,
+    fecha: formatDate(reservation.fecha_reserva),
+    tiempoRestante: "—",
+  };
+}
 
 function useReservations() {
-  const [reservations, setReservations] = useState(initialReservations);
+  const farmaciaId = getUser()?.farmacia_id || null;
+  const [reservations, setReservations] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("TODAS");
   const [selected, setSelected] = useState(null);
+  const [error, setError] = useState("");
+
+  const loadReservations = async () => {
+    if (!farmaciaId) return;
+    try {
+      const response = await reservasApi.listarPorFarmacia(farmaciaId);
+      setReservations((response.data || []).map(normalizeReservation));
+    } catch (err) {
+      setError(err.message || "No se pudieron cargar las reservas.");
+    }
+  };
+
+  useEffect(() => {
+    loadReservations(); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [farmaciaId]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return reservations.filter(
-      (r) =>
-        (filter === "TODAS" || r.estado === filter) &&
-        (r.cliente.toLowerCase().includes(term) ||
-          r.medicamento.toLowerCase().includes(term) ||
-          r.codigoRetiro.includes(term))
+    return reservations.filter((reservation) =>
+      (filter === "TODAS" || reservation.estado === filter) &&
+      (reservation.cliente.toLowerCase().includes(term) ||
+        reservation.medicamento.toLowerCase().includes(term) ||
+        reservation.codigoRetiro.toLowerCase().includes(term))
     );
   }, [reservations, search, filter]);
 
-  const countBy = (estado) => reservations.filter((r) => r.estado === estado).length;
-
-  const changeStatus = (id, estado) => {
-    setReservations((current) =>
-      current.map((r) => (r.id === id ? { ...r, estado, tiempoRestante: "—" } : r))
-    );
-    setSelected(null);
+  const changeStatus = async (id, estado) => {
+    try {
+      const response = await reservasApi.actualizarEstado(id, estado);
+      const updated = normalizeReservation(response.data);
+      setReservations((current) => current.map((item) => item.id === id ? updated : item));
+      setSelected(null);
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar la reserva.");
+    }
   };
 
+  const countBy = (estado) => reservations.filter((item) => item.estado === estado).length;
+
   return {
-    reservations: visible,
-    search, setSearch,
-    filter, setFilter,
-    selected, setSelected,
-    counts: {
-      PENDIENTE: countBy("PENDIENTE"),
-      RECOGIDA: countBy("RECOGIDA"),
-      CANCELADA: countBy("CANCELADA"),
-      EXPIRADA: countBy("EXPIRADA"),
-    },
+    reservations: visible, search, setSearch, filter, setFilter,
+    selected, setSelected, error, reload: loadReservations,
+    counts: Object.fromEntries(Object.keys(statusConfig).map((status) => [status, countBy(status)])),
     changeStatus,
   };
 }

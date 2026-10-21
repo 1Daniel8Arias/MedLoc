@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getUser } from "../../services/session";
-import { inventarioApi, medicamentosApi, farmaciasApi } from "../../services/api";
+import { inventarioApi, medicamentosApi, farmaciasApi, reservasApi } from "../../services/api";
 
 const STOCK_MINIMO_DEFAULT = 10; // umbral si no hay mínimo definido
 
@@ -12,17 +12,7 @@ function useDashboard() {
   const [medicamentosMap, setMedicamentosMap] = useState({});
   const [farmacia, setFarmacia] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Datos estáticos de ejemplo para gráficas (sin endpoint en el back aún)
-  const weeklySales = [
-    { day: "Lun", value: 320 },
-    { day: "Mar", value: 410 },
-    { day: "Mié", value: 280 },
-    { day: "Jue", value: 530 },
-    { day: "Vie", value: 610 },
-    { day: "Sáb", value: 740 },
-    { day: "Dom", value: 482 },
-  ];
+  const [reservations, setReservations] = useState([]);
 
   useEffect(() => {
     if (!farmaciaId) return;
@@ -32,15 +22,17 @@ function useDashboard() {
       setLoading(true);
       try {
         // Cargar datos de la farmacia y su inventario en paralelo
-        const [resF, resI] = await Promise.all([
+        const [resF, resI, resR] = await Promise.all([
           farmaciasApi.obtener(farmaciaId),
           inventarioApi.listarPorFarmacia(farmaciaId),
+          reservasApi.listarPorFarmacia(farmaciaId),
         ]);
         if (cancelled) return;
 
         setFarmacia(resF.data);
         const items = resI.data || [];
         setInventario(items);
+        setReservations(resR.data || []);
 
         // Cargar nombres de medicamentos
         const medMap = {};
@@ -90,9 +82,16 @@ function useDashboard() {
     [inventario]
   );
 
+  const pendingReservations = useMemo(
+    () => reservations.filter((reservation) =>
+      ["pendiente", "confirmada", "lista_para_retiro"].includes(reservation.estado)
+    ),
+    [reservations]
+  );
+
   const statistics = [
-    { id: 1, title: "Ventas de hoy", value: "$ —", description: "Próximamente disponible", tone: "success" },
-    { id: 2, title: "Reservas pendientes", value: "—", description: "Próximamente disponible", tone: "default" },
+    { id: 1, title: "Ventas de hoy", value: "—", description: "Sin módulo de ventas en base de datos", tone: "success" },
+    { id: 2, title: "Reservas pendientes", value: pendingReservations.length, description: "Esperando retiro", tone: "default" },
     { id: 3, title: "Stock bajo", value: lowStock.length, description: "Medicamentos por reponer", tone: "warning" },
     { id: 4, title: "Agotados", value: agotados, description: "Sin unidades disponibles", tone: "danger" },
   ];
@@ -106,8 +105,13 @@ function useDashboard() {
 
   return {
     statistics,
-    weeklySales,
-    pendingReservations: [],   // endpoint de reservas pendiente
+    pendingReservations: pendingReservations.map((reservation) => ({
+      id: reservation.id,
+      cliente: reservation.cliente,
+      medicamento: reservation.detalles?.[0]?.medicamento || "Sin detalle",
+      codigo: reservation.codigo_retiro || "—",
+      restante: reservation.estado,
+    })),
     lowStock,
     latestReview,
     farmacia,

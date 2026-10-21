@@ -12,6 +12,7 @@ function Reservations() {
   const {
     reservations, search, setSearch, filter, setFilter,
     selected, setSelected, counts, changeStatus,
+    error,
   } = useReservations();
 
   return (
@@ -22,15 +23,16 @@ function Reservations() {
         <Header titulo="Reservas" />
 
         <main className="reservations__content">
+          {error && <p className="reservations__empty">{error}</p>}
           <p className="reservations__intro">
             Verifica el código de retiro del cliente antes de entregar el medicamento.
           </p>
 
           <section className="reservations__stats">
-            <StatCard title="Pendientes" value={counts.PENDIENTE} description="Esperando retiro" tone="warning" />
-            <StatCard title="Recogidas" value={counts.RECOGIDA} description="Entregadas" tone="success" />
-            <StatCard title="Canceladas" value={counts.CANCELADA} description="Anuladas por el cliente" />
-            <StatCard title="Expiradas" value={counts.EXPIRADA} description="Superaron las 2 horas" tone="danger" />
+            <StatCard title="Pendientes" value={counts.pendiente} description="Esperando retiro" tone="warning" />
+            <StatCard title="Recogidas" value={counts.retirada} description="Entregadas" tone="success" />
+            <StatCard title="Canceladas" value={counts.cancelada} description="Anuladas por el cliente" />
+            <StatCard title="Expiradas" value={counts.expirada} description="Superaron las 2 horas" tone="danger" />
           </section>
 
           <div className="reservations__panel">
@@ -79,14 +81,14 @@ function Reservations() {
                       <td>{r.cantidad}</td>
                       <td>{r.fecha}</td>
                       <td>{r.tiempoRestante}</td>
-                      <td><Badge tone={statusConfig[r.estado].tone}>{statusConfig[r.estado].label}</Badge></td>
+                      <td><Badge tone={statusConfig[r.estado]?.tone || "neutral"}>{statusConfig[r.estado]?.label || r.estado}</Badge></td>
                       <td>
                         <Button
                           size="sm"
-                          variant={r.estado === "PENDIENTE" ? "success" : "secondary"}
+                          variant={["pendiente", "confirmada", "lista_para_retiro"].includes(r.estado) ? "success" : "secondary"}
                           onClick={() => setSelected(r)}
                         >
-                          {r.estado === "PENDIENTE" ? "Entregar" : "Ver detalle"}
+                          {["pendiente", "confirmada", "lista_para_retiro"].includes(r.estado) ? "Entregar" : "Ver detalle"}
                         </Button>
                       </td>
                     </tr>
@@ -110,19 +112,18 @@ function Reservations() {
             <dl>
               <dt>Código de retiro</dt><dd className="reservations__code">{selected.codigoRetiro}</dd>
               <dt>Cliente</dt><dd>{selected.cliente}</dd>
-              <dt>Teléfono</dt><dd>{selected.telefono}</dd>
               <dt>Medicamento</dt><dd>{selected.medicamento} × {selected.cantidad}</dd>
               <dt>Reservada</dt><dd>{selected.fecha}</dd>
               <dt>Estado</dt>
-              <dd><Badge tone={statusConfig[selected.estado].tone}>{statusConfig[selected.estado].label}</Badge></dd>
+              <dd><Badge tone={statusConfig[selected.estado]?.tone || "neutral"}>{statusConfig[selected.estado]?.label || selected.estado}</Badge></dd>
             </dl>
 
-            {selected.estado === "PENDIENTE" && (
+            {["pendiente", "confirmada", "lista_para_retiro"].includes(selected.estado) && (
               <div className="reservations__detail-actions">
-                <Button variant="success" onClick={() => changeStatus(selected.id, "RECOGIDA")}>
+                <Button variant="success" onClick={() => changeStatus(selected.id, "retirada")}>
                   Confirmar entrega
                 </Button>
-                <Button variant="danger" onClick={() => changeStatus(selected.id, "CANCELADA")}>
+                <Button variant="danger" onClick={() => changeStatus(selected.id, "cancelada")}>
                   Cancelar reserva
                 </Button>
               </div>

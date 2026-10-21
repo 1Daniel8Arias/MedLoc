@@ -100,6 +100,15 @@ export const medicamentosApi = {
     patch(`/medicamentos/${id}`, datos),
 };
 
+// ── Reservas ──────────────────────────────────────────────────────────────────
+
+export const reservasApi = {
+  listarPorFarmacia: (farmaciaId) =>
+    get(`/reservas/?farmacia_id=${encodeURIComponent(farmaciaId)}`),
+  actualizarEstado: (id, estado) =>
+    patch(`/reservas/${id}/estado`, { estado }),
+};
+
 // ── Inventario ────────────────────────────────────────────────────────────────
 
 export const inventarioApi = {

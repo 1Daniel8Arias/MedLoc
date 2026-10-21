@@ -1,34 +1,66 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getUser } from "../../services/session";
+import { inventarioApi, medicamentosApi } from "../../services/api";
 
-const products = [
-    { id: 1, nombre: "Acetaminofén 500mg", presentacion: "Caja x 20 tabletas", categoria: "Analgésico", precio: 3200, stock: 48 },
-    { id: 2, nombre: "Ibuprofeno 400mg", presentacion: "Caja x 10 cápsulas", categoria: "Antiinflamatorio", precio: 5200, stock: 4 },
-    { id: 3, nombre: "Losartán 50mg", presentacion: "Caja x 30 tabletas", categoria: "Cardiovascular", precio: 9200, stock: 8 },
-    { id: 4, nombre: "Omeprazol 20mg", presentacion: "Caja x 14 cápsulas", categoria: "Gastrointestinal", precio: 4500, stock: 16 },
-    { id: 5, nombre: "Amoxicilina 500mg", presentacion: "Caja x 12 cápsulas", categoria: "Antibiótico", precio: 12800, stock: 0 },
-    { id: 6, nombre: "Loratadina 10mg", presentacion: "Caja x 10 tabletas", categoria: "Antialérgico", precio: 3900, stock: 30 },
-    { id: 7, nombre: "Metformina 850mg", presentacion: "Caja x 30 tabletas", categoria: "Endocrino", precio: 7400, stock: 22 },
-    { id: 8, nombre: "Suero oral", presentacion: "Sobre 27.5g", categoria: "Hidratación", precio: 2800, stock: 40 },
-];
-
-const categories = ["Todas", ...new Set(products.map((p) => p.categoria))];
 const paymentMethods = ["Efectivo", "Tarjeta", "Transferencia"];
 
 function useSales() {
+    const farmaciaId = getUser()?.farmacia_id || null;
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [category, setCategory] = useState("Todas");
     const [cart, setCart] = useState([]);
     const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
     const [receipt, setReceipt] = useState(null);
 
+    useEffect(() => {
+        if (!farmaciaId) {
+            setLoading(false); // eslint-disable-line react-hooks/set-state-in-effect
+            return;
+        }
+        let cancelled = false;
+        async function loadProducts() {
+            try {
+                const inventoryResponse = await inventarioApi.listarPorFarmacia(farmaciaId);
+                const items = inventoryResponse.data || [];
+                const loaded = await Promise.all(items.map(async (item) => {
+                    const response = await medicamentosApi.obtener(item.id_medicamento);
+                    const medicine = response.data;
+                    return {
+                        id: item.id_medicamento,
+                        nombre: `${medicine.nombre_comercial}${medicine.concentracion ? ` ${medicine.concentracion}` : ""}`,
+                        presentacion: medicine.presentacion || "Sin presentación",
+                        laboratorio: medicine.laboratorio || "",
+                        precio: Number(item.precio_unitario),
+                        stock: item.stock_actual,
+                    };
+                }));
+                if (!cancelled) setProducts(loaded);
+            } catch (err) {
+                if (!cancelled) setError(err.message || "No se pudo cargar el inventario.");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+        loadProducts();
+        return () => { cancelled = true; };
+    }, [farmaciaId]);
+
+    const categories = useMemo(
+        () => ["Todas", ...new Set(products.map((product) => product.presentacion))],
+        [products]
+    );
+
     const filteredProducts = useMemo(() => {
         const term = search.trim().toLowerCase();
         return products.filter(
             (p) =>
                 p.nombre.toLowerCase().includes(term) &&
-                (category === "Todas" || p.categoria === category)
+                (category === "Todas" || p.presentacion === category)
         );
-    }, [search, category]);
+    }, [products, search, category]);
 
     const addToCart = (product) => {
         setCart((current) => {
@@ -68,6 +100,7 @@ function useSales() {
         search, setSearch,
         category, setCategory, categories,
         products: filteredProducts,
+        loading, error,
         cart, addToCart, changeQuantity, removeItem, clearCart,
         totalItems, total,
         paymentMethod, setPaymentMethod, paymentMethods,

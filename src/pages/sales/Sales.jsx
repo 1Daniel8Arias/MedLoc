@@ -15,6 +15,7 @@ function Sales() {
         cart, addToCart, changeQuantity, removeItem, clearCart,
         totalItems, total, paymentMethod, setPaymentMethod, paymentMethods,
         receipt, closeReceipt, checkout,
+        loading, error,
     } = useSales();
 
     return (
@@ -32,6 +33,10 @@ function Sales() {
                         </div>
 
                         <SearchBar value={search} onChange={setSearch} placeholder="Buscar medicamento" />
+                        {error && <p className="seller__empty">{error}</p>}
+                        {!loading && !error && products.length === 0 && (
+                            <p className="seller__empty">Esta farmacia aún no tiene productos en inventario.</p>
+                        )}
 
                         <div className="seller__chips">
                             {categories.map((c) => (

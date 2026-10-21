@@ -7,8 +7,7 @@ import StarRating from "../../components/starrating/StarRating";
 import useDashboard from "./useDashboard";
 
 function Dashboard() {
-    const { statistics, weeklySales, pendingReservations, lowStock, latestReview } = useDashboard();
-    const maxSale = Math.max(...weeklySales.map((d) => d.value));
+    const { statistics, pendingReservations, lowStock, latestReview } = useDashboard();
 
     return (
         <div className="dashboard">
@@ -32,18 +31,10 @@ function Dashboard() {
                     <div className="dashboard__grid">
                         <section className="panel">
                             <div className="panel__header">
-                                <h3>Ventas de la semana</h3>
-                                <span>Miles de pesos</span>
+                                <h3>Ventas</h3>
+                                <span>Datos reales</span>
                             </div>
-                            <div className="chart" role="img" aria-label="Gráfico de ventas de la semana">
-                                {weeklySales.map((d) => (
-                                    <div key={d.day} className="chart__col">
-                                        <span className="chart__value">{d.value}</span>
-                                        <div className="chart__bar" style={{ height: `${(d.value / maxSale) * 100}%` }} />
-                                        <span className="chart__label">{d.day}</span>
-                                    </div>
-                                ))}
-                            </div>
+                            <p className="dashboard__review">El registro de ventas aún no está disponible en la base de datos.</p>
                         </section>
 
                         <section className="panel">
