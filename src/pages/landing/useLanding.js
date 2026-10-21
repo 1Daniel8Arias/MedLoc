@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import useHashRoute from "../../hooks/useHashRoute";
 import { DEFAULT_LOCATION, CITIES_PRESETS, distanceKm } from "../../services/geo";
 import { getUser, setUser, clearUser } from "../../services/session";
-import { authApi, inventarioApi, farmaciasApi, medicamentosApi } from "../../services/api";
+import { authApi, inventarioApi, farmaciasApi, medicamentosApi, reservasApi } from "../../services/api";
 import { ROLES } from "../../services/users";
 
 const features = [
@@ -104,6 +104,8 @@ function useLanding() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [reservedIds, setReservedIds] = useState([]);
+  const [reservationTarget, setReservationTarget] = useState(null);
+  const [reservationQuantity, setReservationQuantity] = useState(1);
 
   const [query, setQuery] = useState("");
   const [radius, setRadius] = useState(1000); // 1000 = sin límite por defecto para mostrar el catálogo completo
@@ -351,12 +353,47 @@ function useLanding() {
     setReservedIds([]);
   };
 
-  const reserve = (offerId) => {
+  const [reservationError, setReservationError] = useState("");
+  const [reservationLoading, setReservationLoading] = useState(false);
+
+  const openReservation = (offer) => {
     if (!user) {
       goToAccess("register");
       return;
     }
-    setReservedIds((current) => (current.includes(offerId) ? current : [...current, offerId]));
+    setReservationTarget(offer);
+    setReservationQuantity(1);
+    setReservationError("");
+  };
+
+  const closeReservation = () => {
+    if (!reservationLoading) setReservationTarget(null);
+  };
+
+  const reserve = async (offer, quantity = 1) => {
+    if (!user) {
+      goToAccess("register");
+      return;
+    }
+    if (!offer?.farmaciaId || !offer?.medicamentoId) return;
+    setReservationLoading(true);
+    setReservationError("");
+    try {
+      await reservasApi.crear({
+        id_usuario: user.id,
+        id_farmacia: offer.farmaciaId,
+        id_medicamento: offer.medicamentoId,
+        cantidad: Number(quantity),
+      });
+      setReservedIds((current) => (current.includes(offer.id) ? current : [...current, offer.id]));
+      setReservationTarget(null);
+      return true;
+    } catch (err) {
+      setReservationError(err.message || "No se pudo crear la reserva.");
+      return false;
+    } finally {
+      setReservationLoading(false);
+    }
   };
 
   const changeMode = (next) => {
@@ -367,6 +404,9 @@ function useLanding() {
   return {
     mode, setMode: changeMode, handleSubmit, goToAccess,
     user, authError, authLoading, logout, reserve, reservedIds,
+    reservationTarget, reservationQuantity, setReservationQuantity,
+    openReservation, closeReservation,
+    reservationError, reservationLoading,
     goToPanel: () => navigate("/dashboard"),
     features, steps, roles,
     query, setQuery, radius, setRadius,

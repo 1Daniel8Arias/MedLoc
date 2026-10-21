@@ -103,6 +103,7 @@ export const medicamentosApi = {
 // ── Reservas ──────────────────────────────────────────────────────────────────
 
 export const reservasApi = {
+  crear: (datos) => post("/reservas/", datos),
   listarPorFarmacia: (farmaciaId) =>
     get(`/reservas/?farmacia_id=${encodeURIComponent(farmaciaId)}`),
   actualizarEstado: (id, estado) =>

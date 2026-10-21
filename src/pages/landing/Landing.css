@@ -116,6 +116,23 @@
 .landing__hint { padding: 28px; border: 1px dashed #cbd5e1; border-radius: 12px; color: #64748b; text-align: center; background: #fff; }
 .landing__note { margin: 16px 0 0; color: #64748b; font-size: 13px; }
 
+.reservation-confirm { display: flex; flex-direction: column; gap: 18px; }
+.reservation-confirm__summary {
+  padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #eff6ff;
+}
+.reservation-confirm__label { color: #2563eb; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.reservation-confirm__summary h3 { margin: 6px 0 4px; color: #172554; font-size: 20px; }
+.reservation-confirm__summary p { margin: 0; color: #475569; font-size: 13px; }
+.reservation-confirm__details { display: grid; gap: 10px; margin: 0; }
+.reservation-confirm__details div { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+.reservation-confirm__details dt { color: #64748b; font-size: 13px; }
+.reservation-confirm__details dd { margin: 0; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; }
+.reservation-confirm__quantity { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #334155; font-weight: 600; }
+.reservation-confirm__quantity input { width: 90px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; text-align: center; }
+.reservation-confirm__total { margin: 0; color: #475569; text-align: right; }
+.reservation-confirm__total strong { color: #1d4ed8; font-size: 18px; }
+.reservation-confirm__actions { display: flex; justify-content: flex-end; gap: 10px; }
+
 .landing__list { display: flex; flex-direction: column; gap: 12px; }
 .offer {
   display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 24px;
@@ -534,5 +551,4 @@
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-
 

@@ -15,7 +15,11 @@
 .reservations__tab:hover { background: #eff6ff; }
 .reservations__tab--active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
-.reservations__scroll { overflow-x: auto; }
+.reservations__scroll {
+  overflow-x: auto;
+  border-radius: 10px;
+  clip-path: inset(0 round 10px);
+}
 .reservations__scroll table { width: 100%; border-collapse: collapse; text-align: left; }
 .reservations__scroll th,
 .reservations__scroll td { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; color: #334155; white-space: nowrap; }

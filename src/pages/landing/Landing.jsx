@@ -3,6 +3,7 @@ import Button from "../../components/button/Button";
 import Badge from "../../components/badge/Badge";
 import SearchBar from "../../components/searchbar/SearchBar";
 import FormField from "../../components/formfield/FormField";
+import Modal from "../../components/modal/Modal";
 import MedMap from "../../components/medmap/MedMap";
 import { formatCurrency } from "../../services/formatters";
 import { formatDistance } from "../../services/geo";
@@ -17,6 +18,10 @@ function Landing() {
     results, dataLoading,
     mapPharmacies,
     selectedPharmacy, setSelectedPharmacy,
+    reserve, reservedIds,
+    reservationError, reservationLoading,
+    reservationTarget, reservationQuantity, setReservationQuantity,
+    openReservation, closeReservation,
   } = useLanding();
 
   const isLogin = mode === "login";
@@ -39,6 +44,53 @@ function Landing() {
                 {(user.rol === "administrador" || user.rol === "ADMIN_FARMACIA") && (
                   <Button size="sm" variant="secondary" onClick={goToPanel}>Panel Farmacia</Button>
                 )}
+
+                <Modal
+                  open={Boolean(reservationTarget)}
+                  title="Confirmar reserva"
+                  onClose={closeReservation}
+                >
+                  {reservationTarget && (
+                    <div className="reservation-confirm">
+                      <div className="reservation-confirm__summary">
+                        <span className="reservation-confirm__label">Medicamento</span>
+                        <h3>{reservationTarget.medicamento}</h3>
+                        {reservationTarget.presentacion && <p>{reservationTarget.presentacion}</p>}
+                      </div>
+                      <dl className="reservation-confirm__details">
+                        <div><dt>Farmacia</dt><dd>{reservationTarget.farmacia}</dd></div>
+                        <div><dt>Dirección</dt><dd>{reservationTarget.direccion}</dd></div>
+                        <div><dt>Precio unitario</dt><dd>{formatCurrency(reservationTarget.precio)}</dd></div>
+                        <div><dt>Disponibles</dt><dd>{reservationTarget.stock} unidades</dd></div>
+                      </dl>
+                      <label className="reservation-confirm__quantity">
+                        <span>Cantidad a reservar</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={reservationTarget.stock}
+                          value={reservationQuantity}
+                          onChange={(event) => setReservationQuantity(
+                            Math.min(reservationTarget.stock, Math.max(1, Number(event.target.value)))
+                          )}
+                        />
+                      </label>
+                      <p className="reservation-confirm__total">
+                        Total estimado: <strong>{formatCurrency(reservationTarget.precio * reservationQuantity)}</strong>
+                      </p>
+                      {reservationError && <p className="landing__auth-alert" role="alert">{reservationError}</p>}
+                      <div className="reservation-confirm__actions">
+                        <Button variant="secondary" onClick={closeReservation} disabled={reservationLoading}>Cancelar</Button>
+                        <Button
+                          onClick={() => reserve(reservationTarget, reservationQuantity)}
+                          disabled={reservationLoading || reservationTarget.stock < 1}
+                        >
+                          {reservationLoading ? "Reservando..." : "Confirmar reserva"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </Modal>
                 <Button size="sm" variant="ghost" onClick={logout}>Cerrar sesión</Button>
               </div>
             ) : (
@@ -127,7 +179,7 @@ function Landing() {
             </div>
           </div>
 
-          <div className="landing__auth" id="acceso">
+          {!user && <div className="landing__auth" id="acceso">
             <div className="landing__tabs" role="tablist">
               <button
                   role="tab"
@@ -212,7 +264,7 @@ function Landing() {
                 </button>
               </p>
             </form>
-          </div>
+          </div>}
         </section>
 
         {/* Sección de Catálogo / Resultados / Mapa */}
@@ -304,8 +356,12 @@ function Landing() {
                       </div>
 
                       <div className="offer__actions">
-                        <Button size="sm" onClick={() => goToAccess("register")}>
-                          Reservar
+                        <Button
+                          size="sm"
+                          disabled={reservationLoading || reservedIds.includes(r.id)}
+                          onClick={() => openReservation(r)}
+                        >
+                          {reservedIds.includes(r.id) ? "Reservado" : "Reservar"}
                         </Button>
                         <button
                           type="button"
@@ -340,11 +396,17 @@ function Landing() {
             </div>
           )}
 
-          {results.length > 0 && (
+          {results.length > 0 && !user && (
               <p className="landing__note">
                 ℹ️ Para apartar medicamentos necesitas una cuenta. Buscar y explorar el catálogo siempre es libre y sin costo.
               </p>
           )}
+          {user && (
+            <p className="landing__note">
+              Sesión iniciada como <strong>{user.nombre_completo || user.email}</strong>. Ya puedes reservar medicamentos.
+            </p>
+          )}
+          {reservationError && <p className="landing__auth-alert" role="alert">{reservationError}</p>}
         </section>
 
         {/* MODAL / PANEL DE DETALLE DE FARMACIA Y SUS PRODUCTOS */}
@@ -395,11 +457,25 @@ function Landing() {
                           <Badge tone={prod.stock <= 5 ? "warning" : "success"}>
                             {prod.stock <= 5 ? `Quedan ${prod.stock}` : `${prod.stock} disponibles`}
                           </Badge>
-                          <Button size="sm" onClick={() => {
-                            setSelectedPharmacy(null);
-                            goToAccess("register");
-                          }}>
-                            Reservar
+                          <Button
+                            size="sm"
+                            disabled={reservationLoading || reservedIds.includes(`${selectedPharmacy.id}-${prod.id}`)}
+                            onClick={() => {
+                              openReservation({
+                                id: `${selectedPharmacy.id}-${prod.id}`,
+                                farmaciaId: selectedPharmacy.id,
+                                medicamentoId: prod.id,
+                                medicamento: prod.medicamento,
+                                farmacia: selectedPharmacy.nombre,
+                                direccion: selectedPharmacy.direccion,
+                                precio: prod.precio,
+                                stock: prod.stock,
+                                presentacion: prod.presentacion,
+                              });
+                              setSelectedPharmacy(null);
+                            }}
+                          >
+                            {reservedIds.includes(`${selectedPharmacy.id}-${prod.id}`) ? "Reservado" : "Reservar"}
                           </Button>
                         </div>
                       </div>
@@ -412,12 +488,14 @@ function Landing() {
                 <Button variant="secondary" onClick={() => setSelectedPharmacy(null)}>
                   Cerrar
                 </Button>
-                <Button onClick={() => {
-                  setSelectedPharmacy(null);
-                  goToAccess("register");
-                }}>
-                  Crear cuenta para apartar
-                </Button>
+                {!user && (
+                  <Button onClick={() => {
+                    setSelectedPharmacy(null);
+                    goToAccess("register");
+                  }}>
+                    Crear cuenta para apartar
+                  </Button>
+                )}
               </footer>
             </div>
           </div>
