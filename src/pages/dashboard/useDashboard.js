@@ -96,13 +96,6 @@ function useDashboard() {
     { id: 4, title: "Agotados", value: agotados, description: "Sin unidades disponibles", tone: "danger" },
   ];
 
-  // Reseña más reciente (placeholder hasta tener endpoint de reseñas)
-  const latestReview = {
-    autor: "—",
-    puntuacion: null,
-    comentario: "Las reseñas estarán disponibles próximamente.",
-  };
-
   return {
     statistics,
     pendingReservations: pendingReservations.map((reservation) => ({
@@ -113,7 +106,6 @@ function useDashboard() {
       restante: reservation.estado,
     })),
     lowStock,
-    latestReview,
     farmacia,
     loading,
   };

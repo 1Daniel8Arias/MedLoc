@@ -14,19 +14,55 @@ import useInventory, { getStockStatus } from "./useInventory";
 function Inventory() {
     const {
         medicines, stats, search, setSearch, category, setCategory,
-        presentationOptions, modalOpen, setModalOpen, addMedicine, removeMedicine,
+        presentationOptions, modalOpen, setModalOpen, addMedicine, updateMedicine, removeMedicine,
+        error,
     } = useInventory();
     const [createdMessage, setCreatedMessage] = useState("");
+    const [editingMedicine, setEditingMedicine] = useState(null);
+
+    const openCreateModal = () => {
+        setEditingMedicine(null);
+        setModalOpen(true);
+    };
+
+    const openEditModal = (medicine) => {
+        setEditingMedicine(medicine);
+        setModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setEditingMedicine(null);
+        setModalOpen(false);
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
-        const created = await addMedicine({
+        const data = {
             nombre_comercial: form.get("nombre_comercial"),
             principio_activo: form.get("principio_activo"),
             concentracion: form.get("concentracion"),
             presentacion: form.get("presentacion"),
             laboratorio: form.get("laboratorio"),
+        };
+
+        if (editingMedicine) {
+            const updated = await updateMedicine(editingMedicine.id, {
+                ...data,
+                stockActual: Number(form.get("stockActual")),
+                previousStock: editingMedicine.stockActual,
+                precioUnitario: Number(form.get("precioUnitario")),
+                previousPrice: Number(editingMedicine.precioUnitario),
+            });
+            if (updated) {
+                setCreatedMessage(`Se actualizó "${data.nombre_comercial}" correctamente.`);
+                setTimeout(() => setCreatedMessage(""), 5000);
+            }
+            return;
+        }
+
+        const created = await addMedicine({
+            ...data,
             stockActual: Number(form.get("stockActual")),
             stockMinimo: Number(form.get("stockMinimo")),
             precioUnitario: Number(form.get("precioUnitario")),
@@ -61,14 +97,15 @@ function Inventory() {
                     <div className="inventory__table-container">
                         <div className="inventory__table-header">
                             <h3>Stock actual</h3>
-                            <Button onClick={() => setModalOpen(true)}>+ Agregar medicamento</Button>
+                            <Button onClick={openCreateModal}>+ Agregar medicamento</Button>
                         </div>
                         {createdMessage && (
                             <div className="inventory__success" role="status">
-                                <strong>Producto creado</strong>
+                                <strong>Operación completada</strong>
                                 <span>{createdMessage}</span>
                             </div>
                         )}
+                        {error && <p className="inventory__error" role="alert">{error}</p>}
 
                         <div className="inventory__filters">
                             <SearchBar
@@ -119,7 +156,9 @@ function Inventory() {
                                             <td><Badge tone={status.tone}>{status.label}</Badge></td>
                                             <td>{formatCurrency(m.precioUnitario)}</td>
                                             <td className="inventory__actions">
-                                                <Button size="sm" variant="secondary">Editar</Button>
+                                                <Button size="sm" variant="secondary" onClick={() => openEditModal(m)}>
+                                                    Editar
+                                                </Button>
                                                 <Button size="sm" variant="danger" onClick={() => removeMedicine(m.id)}>
                                                     Eliminar
                                                 </Button>
@@ -140,19 +179,50 @@ function Inventory() {
                 </main>
             </div>
 
-            <Modal open={modalOpen} title="Agregar medicamento" onClose={() => setModalOpen(false)}>
-                <form className="inventory__form" onSubmit={handleSubmit}>
-                    <FormField id="nombre_comercial" name="nombre_comercial" label="Nombre comercial" required />
-                    <FormField id="principio_activo" name="principio_activo" label="Principio activo" required />
-                    <FormField id="concentracion" name="concentracion" label="Concentración" placeholder="Ej. 500 mg" />
-                    <FormField id="presentacion" name="presentacion" label="Presentación" placeholder="Ej. Caja x 20 tabletas" />
-                    <FormField id="laboratorio" name="laboratorio" label="Laboratorio" />
+            <Modal
+                open={modalOpen}
+                title={editingMedicine ? "Editar medicamento" : "Agregar medicamento"}
+                onClose={closeModal}
+            >
+                <form className="inventory__form" onSubmit={handleSubmit} key={editingMedicine?.id || "new"}>
+                    <FormField id="nombre_comercial" name="nombre_comercial" label="Nombre comercial" defaultValue={editingMedicine?.nombreComercial || ""} required />
+                    <FormField id="principio_activo" name="principio_activo" label="Principio activo" defaultValue={editingMedicine?.principioActivo === "—" ? "" : editingMedicine?.principioActivo || ""} required />
+                    <FormField id="concentracion" name="concentracion" label="Concentración" placeholder="Ej. 500 mg" defaultValue={editingMedicine?.concentracion || ""} />
+                    <FormField id="presentacion" name="presentacion" label="Presentación" placeholder="Ej. Caja x 20 tabletas" defaultValue={editingMedicine?.presentacion === "—" ? "" : editingMedicine?.presentacion || ""} />
+                    <FormField id="laboratorio" name="laboratorio" label="Laboratorio" defaultValue={editingMedicine?.laboratorio || ""} />
+                    {!editingMedicine && (
                     <div className="inventory__form-row">
                         <FormField id="stockActual" name="stockActual" label="Stock actual" type="number" min="0" required />
                         <FormField id="stockMinimo" name="stockMinimo" label="Stock mínimo" type="number" min="0" required />
                     </div>
+                    )}
+                    {editingMedicine && (
+                    <div className="inventory__form-row">
+                        <FormField
+                            id="stockActual"
+                            name="stockActual"
+                            label="Stock actual"
+                            type="number"
+                            min="0"
+                            defaultValue={editingMedicine.stockActual}
+                            required
+                        />
+                        <FormField
+                            id="precioUnitario"
+                            name="precioUnitario"
+                            label="Precio unitario (COP)"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={editingMedicine.precioUnitario}
+                            required
+                        />
+                    </div>
+                    )}
+                    {!editingMedicine && (
                     <FormField id="precioUnitario" name="precioUnitario" label="Precio unitario (COP)" type="number" min="0" required />
-                    <Button type="submit" fullWidth>Guardar medicamento</Button>
+                    )}
+                    <Button type="submit" fullWidth>{editingMedicine ? "Guardar cambios" : "Guardar medicamento"}</Button>
                 </form>
             </Modal>
         </div>

@@ -3,11 +3,10 @@ import Sidebar from "../../components/sidebar/Sidebar";
 import Header from "../../components/header/Header";
 import StatCard from "../../components/statcard/StatCard";
 import Badge from "../../components/badge/Badge";
-import StarRating from "../../components/starrating/StarRating";
 import useDashboard from "./useDashboard";
 
 function Dashboard() {
-    const { statistics, pendingReservations, lowStock, latestReview } = useDashboard();
+    const { statistics, pendingReservations, lowStock } = useDashboard();
 
     return (
         <div className="dashboard">
@@ -78,17 +77,6 @@ function Dashboard() {
                             </ul>
                         </section>
 
-                        <section className="panel">
-                            <div className="panel__header">
-                                <h3>Última reseña</h3>
-                                <a href="#/calificaciones">Ver calificaciones</a>
-                            </div>
-                            <div className="dashboard__review">
-                                <StarRating value={latestReview.puntuacion} />
-                                <p>{latestReview.comentario}</p>
-                                <span>{latestReview.autor}</span>
-                            </div>
-                        </section>
                     </div>
                 </main>
             </div>

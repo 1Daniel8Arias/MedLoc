@@ -21,8 +21,11 @@ function mergeItems(inventarioItems, medicamentosData) {
             medicamento: med.nombre_comercial
                 ? `${med.nombre_comercial}${med.concentracion ? " " + med.concentracion : ""}`
                 : item.id_medicamento,
+            nombreComercial: med.nombre_comercial || "",
             principioActivo: med.principio_activo || "—",
+            concentracion: med.concentracion || "",
             presentacion: med.presentacion || "—",
+            laboratorio: med.laboratorio || "",
             stockActual: item.stock_actual,
             stockMinimo: 10,                      // valor por defecto (la BD no lo tiene aún)
             precioUnitario: item.precio_unitario,
@@ -137,6 +140,31 @@ function useInventory() {
         }
     };
 
+    const updateMedicine = async (id, data) => {
+        try {
+            await medicamentosApi.actualizar(id, {
+                nombre_comercial: data.nombre_comercial,
+                principio_activo: data.principio_activo,
+                concentracion: data.concentracion || null,
+                presentacion: data.presentacion || null,
+                laboratorio: data.laboratorio || null,
+            });
+            const stockDelta = data.stockActual - data.previousStock;
+            if (stockDelta !== 0) {
+                await inventarioApi.ajustarStock(farmaciaId, id, stockDelta);
+            }
+            if (data.precioUnitario !== data.previousPrice) {
+                await inventarioApi.actualizarPrecio(farmaciaId, id, data.precioUnitario);
+            }
+            setModalOpen(false);
+            await cargarInventario();
+            return true;
+        } catch (err) {
+            setError(err.message || "Error al actualizar el medicamento.");
+            return false;
+        }
+    };
+
     /**
      * Elimina un ítem del inventario ajustando el stock a 0.
      * (El medicamento permanece en el catálogo global.)
@@ -165,6 +193,7 @@ function useInventory() {
         ],
         modalOpen, setModalOpen,
         addMedicine,
+        updateMedicine,
         removeMedicine,
         recargar: cargarInventario,
     };
