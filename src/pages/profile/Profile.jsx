@@ -42,7 +42,6 @@ function Profile() {
                     <FormField id="email" label="Correo electrónico" type="email" value={personal.email} onChange={updatePersonal("email")} required />
                   </div>
                   <div className="profile__row">
-                    <FormField id="telefono" label="Teléfono" type="tel" value={personal.telefono} onChange={updatePersonal("telefono")} />
                     <FormField id="ciudad" label="Ciudad" options={cities} value={personal.ciudad} onChange={updatePersonal("ciudad")} />
                   </div>
                 </>
@@ -51,15 +50,14 @@ function Profile() {
               {tab === "farmacia" && isAdmin && (
                 <>
                   <div className="profile__row">
-                    <FormField id="f-nombre" label="Nombre de la sucursal" value={pharmacy.nombre} onChange={updatePharmacy("nombre")} />
-                    <FormField id="f-nit" label="NIT" value={pharmacy.nit} onChange={updatePharmacy("nit")} />
+                    <FormField id="f-nombre" label="Nombre de la sucursal" value={pharmacy.nombre} onChange={updatePharmacy("nombre")} required />
+                    <FormField id="f-nit" label="NIT" value={pharmacy.nit} onChange={updatePharmacy("nit")} required />
                   </div>
                   <div className="profile__row">
-                    <FormField id="f-direccion" label="Dirección" value={pharmacy.direccion} onChange={updatePharmacy("direccion")} />
-                    <FormField id="f-telefono" label="Teléfono de contacto" value={pharmacy.telefono} onChange={updatePharmacy("telefono")} />
-                  </div>
-                  <div className="profile__row">
+                    <FormField id="f-direccion" label="Dirección" value={pharmacy.direccion} onChange={updatePharmacy("direccion")} required />
                     <FormField id="f-apertura" label="Hora de apertura" type="time" value={pharmacy.apertura} onChange={updatePharmacy("apertura")} />
+                  </div>
+                  <div className="profile__row">
                     <FormField id="f-cierre" label="Hora de cierre" type="time" value={pharmacy.cierre} onChange={updatePharmacy("cierre")} />
                   </div>
                   <div className="profile__row">
@@ -67,7 +65,6 @@ function Profile() {
                     <FormField id="f-lng" label="Longitud" value={pharmacy.longitud} onChange={updatePharmacy("longitud")} />
                   </div>
                   <div className="profile__toggles">
-                    <Toggle label="Ofrezco servicio a domicilio" description="Los pacientes podrán solicitar entrega." checked={pharmacy.domicilio} onChange={togglePharmacy("domicilio")} />
                     <Toggle label="Droguería activa" description="Si la desactivas, no aparecerá en las búsquedas." checked={pharmacy.activa} onChange={togglePharmacy("activa")} />
                   </div>
                 </>

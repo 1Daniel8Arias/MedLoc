@@ -9,7 +9,7 @@ function Header({ titulo }) {
     // El backend devuelve 'nombre_completo'; el mock legacy usaba 'nombre'
     const name = user ? (user.nombre_completo || user.nombre || "Usuario") : "Invitado";
     // Mapear rol del backend ("administrador") al label visible, o usar ROLES para mock
-    const rolKey = user?.rol === "administrador" ? "ADMIN_FARMACIA"
+    const rolKey = ["administrador", "admin_farmacia"].includes(user?.rol) ? "ADMIN_FARMACIA"
         : user?.rol === "paciente" ? "PACIENTE"
         : user?.rol;
     const role = user ? (ROLES[rolKey] || user.rol || "") : "";

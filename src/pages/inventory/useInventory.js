@@ -2,11 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getUser } from "../../services/session";
 import { inventarioApi, medicamentosApi } from "../../services/api";
 
-export const categories = [
-    "Analgésico", "Antiinflamatorio", "Cardiovascular", "Gastrointestinal",
-    "Antibiótico", "Antialérgico", "Endocrino", "Otro",
-];
-
 export function getStockStatus(medicine) {
     if (medicine.stockActual === 0) return { label: "Agotado", tone: "danger" };
     if (medicine.stockActual <= medicine.stockMinimo) return { label: "Stock bajo", tone: "warning" };
@@ -27,7 +22,7 @@ function mergeItems(inventarioItems, medicamentosData) {
                 ? `${med.nombre_comercial}${med.concentracion ? " " + med.concentracion : ""}`
                 : item.id_medicamento,
             principioActivo: med.principio_activo || "—",
-            categoria: med.presentacion || "Otro",
+            presentacion: med.presentacion || "—",
             stockActual: item.stock_actual,
             stockMinimo: 10,                      // valor por defecto (la BD no lo tiene aún)
             precioUnitario: item.precio_unitario,
@@ -96,8 +91,8 @@ function useInventory() {
             const matchesText =
                 m.medicamento.toLowerCase().includes(term) ||
                 m.principioActivo.toLowerCase().includes(term);
-            const matchesCategory = category === "Todas" || m.categoria === category;
-            return matchesText && matchesCategory;
+            const matchesPresentation = category === "Todas" || m.presentacion === category;
+            return matchesText && matchesPresentation;
         });
     }, [allMedicines, search, category]);
 
@@ -117,11 +112,11 @@ function useInventory() {
         try {
             // 1. Crear el medicamento en el catálogo global
             const resMed = await medicamentosApi.crear({
-                nombre_comercial: data.medicamento,
-                principio_activo: data.principioActivo,
-                concentracion: "",
-                presentacion: data.categoria,
-                laboratorio: "",
+                nombre_comercial: data.nombre_comercial,
+                principio_activo: data.principio_activo,
+                concentracion: data.concentracion || null,
+                presentacion: data.presentacion || null,
+                laboratorio: data.laboratorio || null,
             });
             const nuevoMed = resMed.data;
 
@@ -135,8 +130,10 @@ function useInventory() {
 
             setModalOpen(false);
             await cargarInventario(); // recargar para reflejar cambios
+            return true;
         } catch (err) {
             setError(err.message || "Error al agregar el medicamento.");
+            return false;
         }
     };
 
@@ -162,7 +159,10 @@ function useInventory() {
         loading, error,
         search, setSearch,
         category, setCategory,
-        categoryOptions: ["Todas", ...categories],
+        presentationOptions: [
+            "Todas",
+            ...new Set(allMedicines.map((medicine) => medicine.presentacion).filter(Boolean)),
+        ],
         modalOpen, setModalOpen,
         addMedicine,
         removeMedicine,

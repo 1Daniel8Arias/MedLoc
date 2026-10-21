@@ -7,7 +7,7 @@ export const cities = ["Armenia", "Calarcá", "Circasia", "Montenegro", "Quimbay
 
 function useProfile() {
   const sessionUser = getUser();
-  const isAdmin = sessionUser?.rol === "ADMIN_FARMACIA" || sessionUser?.rol === "administrador";
+  const isAdmin = ["ADMIN_FARMACIA", "administrador", "admin_farmacia"].includes(sessionUser?.rol);
 
   const tabs = [
     { id: "datos", label: "Datos personales" },
@@ -24,7 +24,6 @@ function useProfile() {
   const [personal, setPersonal] = useState({
     nombre: sessionUser?.nombre_completo ?? sessionUser?.nombre ?? "",
     email: sessionUser?.email ?? "",
-    telefono: "",
     ciudad: "Armenia",
   });
 
@@ -33,13 +32,11 @@ function useProfile() {
     nombre: sessionUser?.farmacia_nombre ?? "",
     nit: "",
     direccion: "",
-    telefono: "",
     apertura: "07:00",
     cierre: "21:00",
     latitud: "",
     longitud: "",
     activa: true,
-    domicilio: true,
   });
 
   const [notifications, setNotifications] = useState(
@@ -60,6 +57,8 @@ function useProfile() {
           nombre: f.nombre_sucursal,
           nit: f.nit,
           direccion: f.direccion,
+          apertura: f.hora_apertura ? f.hora_apertura.slice(0, 5) : "",
+          cierre: f.hora_cierre ? f.hora_cierre.slice(0, 5) : "",
           latitud: f.latitud ? String(f.latitud) : "",
           longitud: f.longitud ? String(f.longitud) : "",
           activa: f.activa,
@@ -96,15 +95,46 @@ function useProfile() {
         setUser({ ...sessionUser, nombre_completo: personal.nombre });
       }
 
-      if (tab === "farmacia" && pharmacy.id) {
-        // Actualizar datos de la farmacia en el backend
-        await farmaciasApi.actualizar(pharmacy.id, {
+      if (tab === "farmacia" && sessionUser?.id) {
+        const pharmacyData = {
           nombre_sucursal: pharmacy.nombre,
           nit: pharmacy.nit,
           direccion: pharmacy.direccion,
+          hora_apertura: pharmacy.apertura || null,
+          hora_cierre: pharmacy.cierre || null,
           latitud: pharmacy.latitud ? parseFloat(pharmacy.latitud) : null,
           longitud: pharmacy.longitud ? parseFloat(pharmacy.longitud) : null,
           activa: pharmacy.activa,
+        };
+
+        let savedPharmacy;
+        if (pharmacy.id) {
+          const response = await farmaciasApi.actualizar(pharmacy.id, pharmacyData);
+          savedPharmacy = response.data;
+        } else {
+          const response = await farmaciasApi.crear({
+            ...pharmacyData,
+            id_administrador: sessionUser.id,
+          });
+          savedPharmacy = response.data;
+        }
+
+        setPharmacy((current) => ({
+          ...current,
+          id: savedPharmacy.id,
+          nombre: savedPharmacy.nombre_sucursal,
+          nit: savedPharmacy.nit,
+          direccion: savedPharmacy.direccion,
+          apertura: savedPharmacy.hora_apertura ? savedPharmacy.hora_apertura.slice(0, 5) : "",
+          cierre: savedPharmacy.hora_cierre ? savedPharmacy.hora_cierre.slice(0, 5) : "",
+          latitud: savedPharmacy.latitud ? String(savedPharmacy.latitud) : "",
+          longitud: savedPharmacy.longitud ? String(savedPharmacy.longitud) : "",
+          activa: savedPharmacy.activa,
+        }));
+        setUser({
+          ...sessionUser,
+          farmacia_id: savedPharmacy.id,
+          farmacia_nombre: savedPharmacy.nombre_sucursal,
         });
       }
 

@@ -7,26 +7,38 @@ import SearchBar from "../../components/searchbar/SearchBar";
 import StatCard from "../../components/statcard/StatCard";
 import Modal from "../../components/modal/Modal";
 import FormField from "../../components/formfield/FormField";
+import { useState } from "react";
 import { formatCurrency } from "../../services/formatters";
-import useInventory, { categories, getStockStatus } from "./useInventory";
+import useInventory, { getStockStatus } from "./useInventory";
 
 function Inventory() {
     const {
         medicines, stats, search, setSearch, category, setCategory,
-        categoryOptions, modalOpen, setModalOpen, addMedicine, removeMedicine,
+        presentationOptions, modalOpen, setModalOpen, addMedicine, removeMedicine,
     } = useInventory();
+    const [createdMessage, setCreatedMessage] = useState("");
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
-        addMedicine({
-            medicamento: form.get("medicamento"),
-            principioActivo: form.get("principioActivo"),
-            categoria: form.get("categoria"),
+        const created = await addMedicine({
+            nombre_comercial: form.get("nombre_comercial"),
+            principio_activo: form.get("principio_activo"),
+            concentracion: form.get("concentracion"),
+            presentacion: form.get("presentacion"),
+            laboratorio: form.get("laboratorio"),
             stockActual: Number(form.get("stockActual")),
             stockMinimo: Number(form.get("stockMinimo")),
             precioUnitario: Number(form.get("precioUnitario")),
         });
+        if (created) {
+            event.currentTarget.reset();
+            setCreatedMessage(
+                `Se creó "${form.get("nombre_comercial")}" correctamente. ` +
+                "El producto ya está disponible en el inventario."
+            );
+            setTimeout(() => setCreatedMessage(""), 5000);
+        }
     };
 
     return (
@@ -51,6 +63,12 @@ function Inventory() {
                             <h3>Stock actual</h3>
                             <Button onClick={() => setModalOpen(true)}>+ Agregar medicamento</Button>
                         </div>
+                        {createdMessage && (
+                            <div className="inventory__success" role="status">
+                                <strong>Producto creado</strong>
+                                <span>{createdMessage}</span>
+                            </div>
+                        )}
 
                         <div className="inventory__filters">
                             <SearchBar
@@ -62,10 +80,12 @@ function Inventory() {
                                 className="inventory__select"
                                 value={category}
                                 onChange={(e) => setCategory(e.target.value)}
-                                aria-label="Filtrar por categoría"
+                                aria-label="Filtrar por presentación"
                             >
-                                {categoryOptions.map((c) => (
-                                    <option key={c} value={c}>{c === "Todas" ? "Todas las categorías" : c}</option>
+                                {presentationOptions.map((presentation) => (
+                                    <option key={presentation} value={presentation}>
+                                        {presentation === "Todas" ? "Todas las presentaciones" : presentation}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -75,7 +95,7 @@ function Inventory() {
                                 <thead>
                                 <tr>
                                     <th>Medicamento</th>
-                                    <th>Categoría</th>
+                                    <th>Presentación</th>
                                     <th>Stock</th>
                                     <th>Estado</th>
                                     <th>Precio unitario</th>
@@ -91,7 +111,7 @@ function Inventory() {
                                                 <strong>{m.medicamento}</strong>
                                                 <span className="inventory__sub">{m.principioActivo}</span>
                                             </td>
-                                            <td>{m.categoria}</td>
+                                            <td>{m.presentacion}</td>
                                             <td>
                                                 {m.stockActual}
                                                 <span className="inventory__sub">Mínimo: {m.stockMinimo}</span>
@@ -112,7 +132,7 @@ function Inventory() {
 
                             {medicines.length === 0 && (
                                 <p className="inventory__empty">
-                                    No hay medicamentos que coincidan. Prueba con otro nombre o categoría.
+                                    No hay medicamentos que coincidan. Prueba con otro nombre o presentación.
                                 </p>
                             )}
                         </div>
@@ -122,9 +142,11 @@ function Inventory() {
 
             <Modal open={modalOpen} title="Agregar medicamento" onClose={() => setModalOpen(false)}>
                 <form className="inventory__form" onSubmit={handleSubmit}>
-                    <FormField id="medicamento" name="medicamento" label="Nombre y concentración" placeholder="Ej. Naproxeno 250mg" required />
-                    <FormField id="principioActivo" name="principioActivo" label="Principio activo" required />
-                    <FormField id="categoria" name="categoria" label="Categoría" options={categories} />
+                    <FormField id="nombre_comercial" name="nombre_comercial" label="Nombre comercial" required />
+                    <FormField id="principio_activo" name="principio_activo" label="Principio activo" required />
+                    <FormField id="concentracion" name="concentracion" label="Concentración" placeholder="Ej. 500 mg" />
+                    <FormField id="presentacion" name="presentacion" label="Presentación" placeholder="Ej. Caja x 20 tabletas" />
+                    <FormField id="laboratorio" name="laboratorio" label="Laboratorio" />
                     <div className="inventory__form-row">
                         <FormField id="stockActual" name="stockActual" label="Stock actual" type="number" min="0" required />
                         <FormField id="stockMinimo" name="stockMinimo" label="Stock mínimo" type="number" min="0" required />

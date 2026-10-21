@@ -28,4 +28,7 @@ export const clearUser = () => {
     }
 };
 
-export const homeFor = (rol) => (rol === "ADMIN_FARMACIA" ? "/dashboard" : "/");
+export const homeFor = (rol) =>
+    ["ADMIN_FARMACIA", "administrador", "admin_farmacia"].includes(rol)
+        ? "/dashboard"
+        : "/";

@@ -35,6 +35,9 @@ export const suggestions = ["Acetaminofén", "Advil", "Amoxidal", "Clarityne", "
 const normalize = (text) =>
     (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+const isAdminRole = (role) =>
+  role === "administrador" || role === "admin_farmacia" || role === "ADMIN_FARMACIA";
+
 /**
  * Construye la lista de ofertas aplanando el inventario de todas las farmacias y el catálogo.
  */
@@ -292,7 +295,7 @@ function useLanding() {
     setUser(account);
     setUserState(account);
     setAuthError("");
-    if (account.rol === "administrador" || account.rol === "ADMIN_FARMACIA") {
+    if (isAdminRole(account.rol)) {
       navigate("/dashboard");
     }
   }, [navigate]);
@@ -310,7 +313,7 @@ function useLanding() {
       if (mode === "login") {
         const res = await authApi.login(email, password);
         const userData = res.data;
-        const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
+        const rolFrontend = isAdminRole(userData.rol) ? "ADMIN_FARMACIA" : "PACIENTE";
         enter({ ...userData, rol: rolFrontend });
         return;
       }
@@ -333,7 +336,7 @@ function useLanding() {
         rol: rolBackend,
       });
       const userData = res.data;
-      const rolFrontend = userData.rol === "administrador" ? "ADMIN_FARMACIA" : "PACIENTE";
+      const rolFrontend = isAdminRole(userData.rol) ? "ADMIN_FARMACIA" : "PACIENTE";
       enter({ ...userData, rol: rolFrontend });
     } catch (err) {
       setAuthError(err.message || "Correo o contraseña incorrectos.");

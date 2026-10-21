@@ -11,9 +11,9 @@ import Profile from "./pages/profile/Profile";
 import MyReservations from "./pages/myreservations/MyReservations";
 import Favorites from "./pages/favorites/Favorites";
 
-const ADMIN = ["ADMIN_FARMACIA"];
+const ADMIN = ["ADMIN_FARMACIA", "administrador", "admin_farmacia"];
 const PATIENT = ["PACIENTE"];
-const ANY = ["ADMIN_FARMACIA", "PACIENTE"];
+const ANY = ["ADMIN_FARMACIA", "administrador", "admin_farmacia", "PACIENTE"];
 
 // roles: quién puede entrar (null = público)
 const routes = {
