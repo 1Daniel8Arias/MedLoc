@@ -16,6 +16,7 @@
 .landing__links { display: flex; gap: 28px; }
 .landing__links a { color: #cbd5e1; text-decoration: none; font-size: 14px; }
 .landing__links a:hover { color: #fff; }
+.landing__greeting { color: #f8fafc; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
 
 .landing__hero {
   display: grid;
@@ -120,6 +121,7 @@
 .reservation-confirm__summary {
   padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #eff6ff;
 }
+
 .reservation-confirm__label { color: #2563eb; font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .reservation-confirm__summary h3 { margin: 6px 0 4px; color: #172554; font-size: 20px; }
 .reservation-confirm__summary p { margin: 0; color: #475569; font-size: 13px; }
@@ -242,6 +244,13 @@
   font-size: 13.5px;
   color: #e2e8f0;
 }
+.landing__user-nav a {
+  color: #dbeafe;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.landing__user-nav a:hover { color: #fff; text-decoration: underline; }
 
 /* ===== Selector de Distancia y Filtros ===== */
 .landing__filter-group {
@@ -551,4 +560,3 @@
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-

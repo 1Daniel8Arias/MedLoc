@@ -27,6 +27,8 @@ function Landing() {
   const isLogin = mode === "login";
   const hasQuery = query.trim().length > 0;
   const isUnlimited = radius >= 1000;
+  const isAdmin = ["administrador", "admin_farmacia"].includes(user?.rol?.toLowerCase());
+  const displayName = (user?.nombre_completo || user?.email || "Usuario").trim().split(/\s+/)[0];
 
   return (
       <div className="landing">
@@ -40,8 +42,14 @@ function Landing() {
             <a href="#como-funciona">Cómo funciona</a>
             {user ? (
               <div className="landing__user-nav">
-                <span>Hola, {user.nombre_completo || user.email}</span>
-                {(user.rol === "administrador" || user.rol === "ADMIN_FARMACIA") && (
+                <span className="landing__greeting">Hola, {displayName}</span>
+                {!isAdmin && (
+                  <>
+                    <a href="#/mis-reservas">Mis reservas</a>
+                    <a href="#/perfil">Mi perfil</a>
+                  </>
+                )}
+                {isAdmin && (
                   <Button size="sm" variant="secondary" onClick={goToPanel}>Panel Farmacia</Button>
                 )}
 
@@ -93,9 +101,7 @@ function Landing() {
                 </Modal>
                 <Button size="sm" variant="ghost" onClick={logout}>Cerrar sesión</Button>
               </div>
-            ) : (
-              <a href="#acceso" onClick={() => setMode("login")}>Ingresar</a>
-            )}
+            ) : null}
           </nav>
         </header>
 

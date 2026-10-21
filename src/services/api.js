@@ -106,6 +106,8 @@ export const reservasApi = {
   crear: (datos) => post("/reservas/", datos),
   listarPorFarmacia: (farmaciaId) =>
     get(`/reservas/?farmacia_id=${encodeURIComponent(farmaciaId)}`),
+  listarPorUsuario: (usuarioId) =>
+    get(`/reservas/?usuario_id=${encodeURIComponent(usuarioId)}`),
   actualizarEstado: (id, estado) =>
     patch(`/reservas/${id}/estado`, { estado }),
 };

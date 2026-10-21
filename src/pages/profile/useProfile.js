@@ -150,7 +150,7 @@ function useProfile() {
   return {
     user: sessionUser,
     isAdmin,
-    roleLabel: ROLES[sessionUser?.rol] || sessionUser?.rol,
+    roleLabel: ROLES[sessionUser?.rol] || ROLES[sessionUser?.rol?.toUpperCase()] || sessionUser?.rol,
     tabs, tab, setTab,
     personal, updatePersonal,
     pharmacy, updatePharmacy, togglePharmacy,

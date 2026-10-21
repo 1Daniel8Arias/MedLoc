@@ -2,6 +2,7 @@
 .myres__main { flex: 1; min-width: 0; }
 .myres__content { padding: 32px; max-width: 1000px; }
 .myres__intro { margin: 0 0 20px; color: #64748b; }
+.myres__error { padding: 12px 14px; margin: 0 0 16px; color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; }
 .myres__list { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
 .myres__empty { padding: 36px; text-align: center; color: #64748b; background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; }
 

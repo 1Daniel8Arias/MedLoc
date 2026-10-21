@@ -13,6 +13,7 @@ function MyReservations() {
   const {
     tabs, tab, setTab, list, cancel,
     rateTarget, openRate, closeRate, rating, setRating, comment, setComment, submitRating,
+    loading, error,
   } = useMyReservations();
 
   return (
@@ -26,21 +27,25 @@ function MyReservations() {
           <p className="myres__intro">
             Presenta tu código de retiro en la droguería antes de que se cumplan las 2 horas.
           </p>
+          {error && <p className="myres__error" role="alert">{error}</p>}
 
           <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
           <div className="myres__list">
+            {loading && <p className="myres__empty">Cargando tus reservas...</p>}
             {list.map((r) => (
               <article key={r.id} className="resv">
                 <div className="resv__info">
                   <div className="resv__top">
                     <h3>{r.medicamento} <span>× {r.cantidad}</span></h3>
-                    <Badge tone={statusConfig[r.estado].tone}>{statusConfig[r.estado].label}</Badge>
+                    <Badge tone={statusConfig[r.estado]?.tone || "neutral"}>
+                      {statusConfig[r.estado]?.label || r.estado}
+                    </Badge>
                   </div>
                   <p className="resv__pharmacy">{r.farmacia}</p>
                   <p className="resv__address">{r.direccion}</p>
 
-                  {r.estado === "PENDIENTE" && (
+                  {["pendiente", "confirmada", "lista_para_retiro"].includes(r.estado) && (
                     <div className="resv__time">
                       <span>Te quedan {r.restante}</span>
                       <div className="resv__progress"><div style={{ width: `${r.progreso}%` }} /></div>
@@ -54,20 +59,20 @@ function MyReservations() {
                 </div>
 
                 <div className="resv__actions">
-                  {r.estado === "PENDIENTE" && (
+                  {["pendiente", "confirmada", "lista_para_retiro"].includes(r.estado) && (
                     <>
                       <Button size="sm" variant="secondary">Cómo llegar</Button>
                       <Button size="sm" variant="danger" onClick={() => cancel(r.id)}>Cancelar reserva</Button>
                     </>
                   )}
-                  {r.estado === "RECOGIDA" && (
+                  {r.estado === "retirada" && (
                     r.calificada ? (
                       <Badge tone="info">Ya calificaste</Badge>
                     ) : (
                       <Button size="sm" onClick={() => openRate(r)}>Calificar droguería</Button>
                     )
                   )}
-                  {(r.estado === "CANCELADA" || r.estado === "EXPIRADA") && (
+                  {(r.estado === "cancelada" || r.estado === "expirada") && (
                     <Button size="sm" variant="ghost">Reservar de nuevo</Button>
                   )}
                 </div>

@@ -11,9 +11,9 @@ import Profile from "./pages/profile/Profile";
 import MyReservations from "./pages/myreservations/MyReservations";
 import Favorites from "./pages/favorites/Favorites";
 
-const ADMIN = ["ADMIN_FARMACIA", "administrador", "admin_farmacia"];
-const PATIENT = ["PACIENTE"];
-const ANY = ["ADMIN_FARMACIA", "administrador", "admin_farmacia", "PACIENTE"];
+const ADMIN = ["admin_farmacia", "administrador"];
+const PATIENT = ["paciente"];
+const ANY = [...ADMIN, ...PATIENT];
 
 // roles: quién puede entrar (null = público)
 const routes = {
@@ -32,7 +32,8 @@ function App() {
   const { route, navigate } = useHashRoute();
   const entry = routes[route] ?? routes["/"];
   const user = getUser();
-  const allowed = !entry.roles || (user && entry.roles.includes(user.rol));
+  const normalizedRole = user?.rol?.toLowerCase();
+  const allowed = !entry.roles || (user && entry.roles.includes(normalizedRole));
 
   useEffect(() => {
     if (!allowed) navigate(user ? homeFor(user.rol) : "/");

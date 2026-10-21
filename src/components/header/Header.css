@@ -3,8 +3,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 20px 32px;
+  gap: 32px;
+  padding: 16px 32px;
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -24,7 +24,18 @@
 .header__user {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.header__user:hover {
+  background-color: #f8fafc;
+  border-color: #bfdbfe;
 }
 
 .header__avatar {
@@ -33,6 +44,7 @@
   justify-content: center;
   width: 42px;
   height: 42px;
+  flex-shrink: 0;
   border-radius: 50%;
   background-color: #dbeafe;
   color: #1d4ed8;
@@ -43,15 +55,33 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .header__user-name {
   color: #0f172a;
   font-size: 14px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header__user-role {
   color: #64748b;
   font-size: 12px;
+}
+
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 650px) {
+  .header { padding: 14px 16px; gap: 12px; }
+  .header__title p { display: none; }
+  .header__user { padding-right: 6px; }
+  .header__user-info { display: none; }
 }

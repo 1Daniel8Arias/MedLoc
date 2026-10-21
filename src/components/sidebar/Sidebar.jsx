@@ -7,7 +7,6 @@ const adminLinks = [
     { path: "/inventario", icon: "♙", label: "Inventario" },
     { path: "/ventas", icon: "▣", label: "Punto de venta" },
     { path: "/reservas", icon: "▤", label: "Reservas" },
-    { path: "/calificaciones", icon: "★", label: "Calificaciones" },
     { path: "/perfil", icon: "☺", label: "Mi perfil" },
 ];
 
@@ -21,7 +20,8 @@ const patientLinks = [
 function Sidebar() {
     const { route } = useHashRoute();
     const user = getUser();
-    const links = user?.rol === "PACIENTE" ? patientLinks : adminLinks;
+    const isPatient = user?.rol?.toLowerCase() === "paciente";
+    const links = isPatient ? patientLinks : adminLinks;
 
     return (
         <aside className="sidebar">
@@ -50,7 +50,7 @@ function Sidebar() {
                     <span>⎋</span>
                     Cerrar sesión
                 </a>
-                <p>{user?.rol === "PACIENTE" ? "Cuenta de paciente" : "Sistema de administración"}</p>
+                <p>{isPatient ? "Cuenta de paciente" : "Sistema de administración"}</p>
             </div>
         </aside>
     );

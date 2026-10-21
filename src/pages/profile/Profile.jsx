@@ -11,7 +11,7 @@ function Profile() {
   const {
     user, isAdmin, roleLabel, tabs, tab, setTab,
     personal, updatePersonal, pharmacy, updatePharmacy, togglePharmacy,
-    notifications, toggleNotification, saved, save,
+    notifications, toggleNotification, saved, save, saveError,
   } = useProfile();
 
   return (
@@ -39,7 +39,7 @@ function Profile() {
                 <>
                   <div className="profile__row">
                     <FormField id="nombre" label="Nombre completo" value={personal.nombre} onChange={updatePersonal("nombre")} required />
-                    <FormField id="email" label="Correo electrónico" type="email" value={personal.email} onChange={updatePersonal("email")} required />
+                    <FormField id="email" label="Correo electrónico" type="email" value={personal.email} disabled />
                   </div>
                   <div className="profile__row">
                     <FormField id="ciudad" label="Ciudad" options={cities} value={personal.ciudad} onChange={updatePersonal("ciudad")} />
@@ -109,6 +109,7 @@ function Profile() {
               <div className="profile__actions">
                 <Button type="submit">Guardar cambios</Button>
                 {saved && <span className="profile__saved" role="status">{saved}</span>}
+                {saveError && <span className="profile__error" role="alert">{saveError}</span>}
               </div>
             </form>
           </section>

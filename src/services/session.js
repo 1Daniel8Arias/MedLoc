@@ -29,6 +29,6 @@ export const clearUser = () => {
 };
 
 export const homeFor = (rol) =>
-    ["ADMIN_FARMACIA", "administrador", "admin_farmacia"].includes(rol)
+    ["administrador", "admin_farmacia"].includes(rol?.toLowerCase())
         ? "/dashboard"
         : "/";
